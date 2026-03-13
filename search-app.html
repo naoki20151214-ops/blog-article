@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生検索</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        .navbar a:hover {
+            color: #667eea;
+        }
+        .navbar a.home {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .search-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+        .search-container h1 {
+            color: #667eea;
+            margin-top: 0;
+            text-align: center;
+            font-size: 32px;
+        }
+        .search-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .search-input {
+            flex: 1;
+            min-width: 200px;
+            padding: 12px 15px;
+            border: 2px solid #667eea;
+            border-radius: 5px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        .search-input:focus {
+            outline: none;
+            border-color: #764ba2;
+        }
+        .search-button {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        .search-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        .results-section {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+        }
+        .results-section h2 {
+            color: #667eea;
+            margin-top: 0;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .student-result {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+        .student-name {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .student-scores {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+        .score-item {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            border: 1px solid #e0e0e0;
+        }
+        .score-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .score-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+        .total-rank {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .total-item {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 15px;
+            border-radius: 5px;
+            text-align: center;
+            color: white;
+        }
+        .total-label {
+            font-size: 12px;
+            opacity: 0.9;
+            margin-bottom: 5px;
+        }
+        .total-value {
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .no-results {
+            text-align: center;
+            color: #999;
+            padding: 20px;
+            font-style: italic;
+        }
+        .ranking-table {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        .ranking-table h2 {
+            color: #667eea;
+            margin-top: 0;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        thead {
+            background-color: #f0f0f0;
+        }
+        th {
+            padding: 12px;
+            text-align: left;
+            font-weight: bold;
+            color: #667eea;
+            border-bottom: 2px solid #667eea;
+        }
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        tr:hover {
+            background-color: #f9f9f9;
+        }
+        .rank-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            min-width: 35px;
+            text-align: center;
+        }
+        .rank-1 {
+            background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+            color: #333;
+        }
+        .rank-2 {
+            background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
+            color: #333;
+        }
+        .rank-3 {
+            background: linear-gradient(135deg, #cd7f32 0%, #d4a574 100%);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="index.html" class="home">ホーム</a>
+            <div>
+                <a href="about.html">自己紹介</a>
+                <a href="products.html">商品紹介</a>
+                <a href="search-app.html">学生検索</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="search-container">
+            <h1>学生検索システム</h1>
+            <div class="search-form">
+                <input type="text" id="searchInput" class="search-input" placeholder="生徒名で検索..." />
+                <button class="search-button" onclick="performSearch()">検索</button>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <h2>検索結果</h2>
+            <div id="resultsContainer">
+                <p class="no-results">生徒を検索してください</p>
+            </div>
+        </div>
+
+        <div class="ranking-table">
+            <h2>トップ10ランキング</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>順位</th>
+                        <th>生徒名</th>
+                        <th>国語</th>
+                        <th>算数</th>
+                        <th>理科</th>
+                        <th>社会</th>
+                        <th>総合点</th>
+                    </tr>
+                </thead>
+                <tbody id="rankingTableBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        let studentsData = [];
+
+        // ページ読み込み時にデータを取得
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStudentsData();
+            displayTop10Ranking();
+        });
+
+        // JSONデータを読み込む
+        function loadStudentsData() {
+            fetch('students-data.json')
+                .then(response => response.json())
+                .then(data => {
+                    studentsData = data;
+                    // 総合点を計算してランキングを計算
+                    calculateTotalsAndRanks();
+                    displayTop10Ranking();
+                })
+                .catch(error => {
+                    console.error('データの読み込みに失敗しました:', error);
+                    document.getElementById('resultsContainer').innerHTML =
+                        '<p class="no-results">データの読み込みに失敗しました</p>';
+                });
+        }
+
+        // 総合点を計算してランキングを付ける
+        function calculateTotalsAndRanks() {
+            studentsData.forEach(student => {
+                student.total_score = student.japanese_score + student.math_score +
+                                     student.science_score + student.social_score;
+            });
+
+            // 総合点でソート（降順）
+            studentsData.sort((a, b) => b.total_score - a.total_score);
+
+            // ランクを付与
+            studentsData.forEach((student, index) => {
+                student.rank = index + 1;
+            });
+        }
+
+        // 検索を実行
+        function performSearch() {
+            const searchTerm = document.getElementById('searchInput').value.trim();
+            const resultsContainer = document.getElementById('resultsContainer');
+
+            if (searchTerm === '') {
+                resultsContainer.innerHTML = '<p class="no-results">生徒を検索してください</p>';
+                return;
+            }
+
+            // 部分検索（大文字小文字区別なし）
+            const searchTermLower = searchTerm.toLowerCase();
+            const results = studentsData.filter(student =>
+                student.name.toLowerCase().includes(searchTermLower)
+            );
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<p class="no-results">検索結果がありません</p>';
+                return;
+            }
+
+            let resultsHTML = '';
+            results.forEach(student => {
+                const rankClass = student.rank <= 3 ? `rank-${student.rank}` : '';
+                resultsHTML += `
+                    <div class="student-result">
+                        <div class="student-name">${student.name}</div>
+                        <div class="student-scores">
+                            <div class="score-item">
+                                <div class="score-label">国語</div>
+                                <div class="score-value">${student.japanese_score}</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">算数</div>
+                                <div class="score-value">${student.math_score}</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">理科</div>
+                                <div class="score-value">${student.science_score}</div>
+                            </div>
+                            <div class="score-item">
+                                <div class="score-label">社会</div>
+                                <div class="score-value">${student.social_score}</div>
+                            </div>
+                        </div>
+                        <div class="total-rank">
+                            <div class="total-item">
+                                <div class="total-label">総合点</div>
+                                <div class="total-value">${student.total_score}</div>
+                            </div>
+                            <div class="total-item">
+                                <div class="total-label">順位</div>
+                                <div class="total-value">${student.rank}位</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            resultsContainer.innerHTML = resultsHTML;
+        }
+
+        // Enter キーで検索を実行
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('searchInput').addEventListener('keypress', function(event) {
+                if (event.key === 'Enter') {
+                    performSearch();
+                }
+            });
+        });
+
+        // トップ10ランキングを表示
+        function displayTop10Ranking() {
+            const top10 = studentsData.slice(0, 10);
+            const tbody = document.getElementById('rankingTableBody');
+            tbody.innerHTML = '';
+
+            top10.forEach(student => {
+                const rankClass = student.rank <= 3 ? `rank-${student.rank}` : '';
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><span class="rank-badge ${rankClass}">${student.rank}</span></td>
+                    <td>${student.name}</td>
+                    <td>${student.japanese_score}</td>
+                    <td>${student.math_score}</td>
+                    <td>${student.science_score}</td>
+                    <td>${student.social_score}</td>
+                    <td><strong>${student.total_score}</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ホーム</title>
+    <title>自己紹介</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -48,46 +48,23 @@
             min-height: calc(100vh - 60px);
             padding: 40px 20px;
         }
-        .home-container {
+        .about-container {
             background: white;
-            padding: 50px 40px;
+            padding: 40px;
             border-radius: 10px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
             max-width: 600px;
             text-align: center;
         }
+        .about-text {
+            font-size: 18px;
+            line-height: 1.8;
+            color: #333;
+            margin: 20px 0;
+        }
         h1 {
             color: #667eea;
             margin-top: 0;
-            font-size: 36px;
-        }
-        .welcome-text {
-            font-size: 16px;
-            line-height: 1.8;
-            color: #666;
-            margin: 20px 0 30px 0;
-        }
-        .navigation-links {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .nav-link {
-            display: inline-block;
-            padding: 12px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 5px;
-            font-size: 16px;
-            font-weight: bold;
-            transition: transform 0.3s, box-shadow 0.3s;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-        .nav-link:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
     </style>
 </head>
@@ -103,15 +80,11 @@
     </nav>
 
     <div class="container">
-        <div class="home-container">
-            <h1>ようこそ</h1>
-            <p class="welcome-text">
-                このサイトへようこそ！私たちについてもっと知りたい方は、自己紹介ページをご覧ください。また、当社の商品についてはこちらからご確認いただけます。
+        <div class="about-container">
+            <h1>自己紹介</h1>
+            <p class="about-text">
+                おはようございます！本日も皆様のご利用をありがとうございます。これからも心をこめてサービスを提供させていただきます。何かご質問がございましたら、お気軽にお問い合わせください。本当にありがとうございました！
             </p>
-            <div class="navigation-links">
-                <a href="about.html" class="nav-link">自己紹介</a>
-                <a href="products.html" class="nav-link">商品紹介</a>
-            </div>
         </div>
     </div>
 </body>

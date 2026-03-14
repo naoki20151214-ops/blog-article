@@ -264,24 +264,36 @@
         /* Grid for vocabulary and grammar checkboxes */
         .subtasks-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 8px;
+        }
+        /* Subtask item wrapper for button - occupy grid cell */
+        .subtask-item-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            padding: 8px 6px;
+            transition: all 0.2s;
+        }
+        .subtask-item-wrapper:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
         }
         /* Individual Subtask Checkbox Item (Grid style) */
         .subtask-item {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 10px;
-            background: white;
-            border-radius: 4px;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
             cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid #ddd;
-        }
-        .subtask-item:hover {
-            background: #f5f5f5;
-            border-color: #667eea;
+            transition: none;
+            border: none;
+            flex-grow: 1;
         }
         .subtask-checkbox {
             appearance: none;
@@ -323,10 +335,11 @@
             flex-direction: column;
             gap: 8px;
         }
-        .subtask-list-item {
+        /* Practice task wrapper with button */
+        .subtask-list-item-wrapper {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             padding: 12px;
             background: white;
             border-radius: 4px;
@@ -334,10 +347,27 @@
             transition: all 0.2s;
             border: 1px solid #ddd;
         }
-        .subtask-list-item:hover {
+        .subtask-list-item-wrapper:hover {
             background: #f5f5f5;
             border-color: #667eea;
             transform: translateX(2px);
+        }
+        .subtask-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            cursor: pointer;
+            transition: none;
+            border: none;
+            flex-grow: 1;
+        }
+        .subtask-list-item:hover {
+            background: transparent;
+            border-color: transparent;
+            transform: none;
         }
         .subtask-list-item.completed {
             background: #f0f7ff;
@@ -377,6 +407,179 @@
         .subtask-list-item.completed .subtask-list-label {
             color: #667eea;
             font-weight: 600;
+        }
+
+        /* Task Queue Styles */
+        .task-queue-section {
+            margin-top: 40px;
+            padding: 25px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .task-queue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .task-queue-header h2 {
+            margin: 0;
+            color: #667eea;
+            font-size: 20px;
+        }
+
+        .task-queue-count {
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin: 0 15px;
+        }
+
+        .task-queue-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #667eea;
+            font-size: 18px;
+            transition: transform 0.2s;
+        }
+
+        .task-queue-toggle-btn.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .task-queue-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .task-queue-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            background: white;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s;
+        }
+
+        .task-queue-item:hover {
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            transform: translateX(2px);
+        }
+
+        .task-queue-item-info {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .task-queue-item-kpi {
+            font-size: 12px;
+            color: #999;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .task-queue-item-name {
+            font-size: 14px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .task-queue-item-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 15px;
+        }
+
+        .task-queue-item-checkbox:hover {
+            background: #f5f5f5;
+        }
+
+        .task-queue-item-checkbox:checked {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #764ba2;
+        }
+
+        .task-queue-item-checkbox:checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .task-queue-empty {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+            font-size: 14px;
+        }
+
+        /* Add to Queue Button */
+        .add-to-queue-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 4px 6px;
+            color: #667eea;
+            transition: all 0.2s;
+            margin-left: 8px;
+        }
+
+        .add-to-queue-btn:hover {
+            color: #764ba2;
+            transform: scale(1.2);
+        }
+
+        .add-to-queue-btn.in-queue {
+            cursor: not-allowed;
+            opacity: 0.5;
+            color: #999;
+        }
+
+        .add-to-queue-btn.in-queue:hover {
+            color: #999;
+            transform: scale(1);
+        }
+
+        /* Subtask item wrapper for button */
+        .subtask-item-wrapper {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 6px;
+        }
+
+        .subtask-list-item-wrapper {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            gap: 10px;
         }
     </style>
 </head>
@@ -527,6 +730,18 @@
             </div>
 
             <button class="reset-btn" onclick="resetKPIs()">進捗をリセット</button>
+
+            <!-- Task Queue Section -->
+            <div class="task-queue-section" id="task-queue-section">
+                <div class="task-queue-header">
+                    <h2>📋 作業キュー</h2>
+                    <span class="task-queue-count" id="task-queue-count">0</span>
+                    <button class="task-queue-toggle-btn" id="task-queue-toggle-btn" onclick="toggleTaskQueueView()">▼</button>
+                </div>
+                <div class="task-queue-list" id="task-queue-list">
+                    <div class="task-queue-empty">タスクはありません</div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -548,6 +763,137 @@
             grammar: 28,
             practice: 1
         };
+
+        // ===== TASK QUEUE SYSTEM FUNCTIONS =====
+
+        // Task Queue Manager
+        function getTaskQueue() {
+            const stored = localStorage.getItem('kgi_task_queue');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        function saveTaskQueue(queue) {
+            localStorage.setItem('kgi_task_queue', JSON.stringify(queue));
+        }
+
+        function isTaskInQueue(kpiId, subtaskId) {
+            const queue = getTaskQueue();
+            return queue.some(t => t.kpiId === kpiId && t.subtaskId === subtaskId);
+        }
+
+        function addTaskToQueue(kpiId, subtaskId, subtaskName) {
+            // Check if task is already in queue
+            if (isTaskInQueue(kpiId, subtaskId)) {
+                alert('このタスクは既に作業キューに追加されています。');
+                return;
+            }
+
+            const queue = getTaskQueue();
+            const queueId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            queue.push({
+                queueId: queueId,
+                kpiId: kpiId,
+                subtaskId: subtaskId,
+                subtaskName: subtaskName,
+                addedAt: Date.now(),
+                completed: false
+            });
+
+            saveTaskQueue(queue);
+            renderTaskQueue();
+
+            // Update subtask rendering to show button status
+            if (kpiId === 'vocab') renderVocabSubtasks();
+            else if (kpiId === 'grammar') renderGrammarSubtasks();
+            else if (kpiId === 'practice') renderPracticeSubtasks();
+        }
+
+        function removeTaskFromQueue(queueId) {
+            let queue = getTaskQueue();
+            queue = queue.filter(t => t.queueId !== queueId);
+            saveTaskQueue(queue);
+            renderTaskQueue();
+
+            // Update subtask rendering to show button status
+            ['vocab', 'grammar', 'practice'].forEach(kpiId => {
+                if (kpiId === 'vocab') renderVocabSubtasks();
+                else if (kpiId === 'grammar') renderGrammarSubtasks();
+                else if (kpiId === 'practice') renderPracticeSubtasks();
+            });
+        }
+
+        function completeQueueTask(queueId) {
+            const queue = getTaskQueue();
+            const queueTask = queue.find(t => t.queueId === queueId);
+
+            if (queueTask) {
+                // Toggle the subtask on the KPI side
+                toggleSubtask(queueTask.kpiId, queueTask.subtaskId);
+
+                // Remove from queue
+                removeTaskFromQueue(queueId);
+            }
+        }
+
+        function renderTaskQueue() {
+            const queue = getTaskQueue();
+            const container = document.getElementById('task-queue-list');
+            const countEl = document.getElementById('task-queue-count');
+
+            if (!container) return;
+
+            // Update count
+            countEl.textContent = queue.length;
+
+            if (queue.length === 0) {
+                container.innerHTML = '<div class="task-queue-empty">タスクはありません</div>';
+                return;
+            }
+
+            // Sort by addedAt (FIFO)
+            const sorted = [...queue].sort((a, b) => a.addedAt - b.addedAt);
+
+            container.innerHTML = sorted.map(task => {
+                const kpiEmoji = {
+                    vocab: '📚',
+                    grammar: '📖',
+                    practice: '✏️'
+                }[task.kpiId] || '📋';
+
+                const kpiName = {
+                    vocab: '英単語',
+                    grammar: '英文法',
+                    practice: '過去問'
+                }[task.kpiId] || 'その他';
+
+                const escapedQueueId = task.queueId.replace(/'/g, "\\'");
+
+                return `
+                    <label class="task-queue-item">
+                        <div class="task-queue-item-info">
+                            <div class="task-queue-item-kpi">${kpiEmoji} ${kpiName}</div>
+                            <div class="task-queue-item-name">${task.subtaskName}</div>
+                        </div>
+                        <input type="checkbox"
+                               class="task-queue-item-checkbox"
+                               onchange="completeQueueTask('${escapedQueueId}')">
+                    </label>
+                `;
+            }).join('');
+        }
+
+        function toggleTaskQueueView() {
+            const btn = document.getElementById('task-queue-toggle-btn');
+            const list = document.getElementById('task-queue-list');
+
+            if (list.style.display === 'none') {
+                list.style.display = 'flex';
+                btn.classList.remove('collapsed');
+            } else {
+                list.style.display = 'none';
+                btn.classList.add('collapsed');
+            }
+        }
 
         // ===== SUBTASK SYSTEM FUNCTIONS =====
 
@@ -616,15 +962,27 @@
             const container = document.getElementById('vocab-subtasks-grid');
             if (!container) return;
 
-            container.innerHTML = subtasks.map(subtask => `
-                <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
-                    <input type="checkbox"
-                           class="subtask-checkbox"
-                           ${subtask.completed ? 'checked' : ''}
-                           onchange="toggleSubtask('vocab', ${subtask.id})">
-                    <span class="subtask-label-text">${subtask.name}</span>
-                </label>
-            `).join('');
+            container.innerHTML = subtasks.map(subtask => {
+                const inQueue = isTaskInQueue('vocab', subtask.id);
+                const escapedName = subtask.name.replace(/'/g, "\\'");
+                return `
+                    <div class="subtask-item-wrapper">
+                        <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
+                            <input type="checkbox"
+                                   class="subtask-checkbox"
+                                   ${subtask.completed ? 'checked' : ''}
+                                   onchange="toggleSubtask('vocab', ${subtask.id})">
+                            <span class="subtask-label-text">${subtask.name}</span>
+                        </label>
+                        <button class="add-to-queue-btn ${inQueue ? 'in-queue' : ''}"
+                                onclick="addTaskToQueue('vocab', ${subtask.id}, '${escapedName}')"
+                                ${inQueue ? 'disabled title="実行中"' : 'title="キューに追加"'}
+                                type="button">
+                            ${inQueue ? '⏳' : '➕'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Render grammar subtasks
@@ -633,15 +991,27 @@
             const container = document.getElementById('grammar-subtasks-grid');
             if (!container) return;
 
-            container.innerHTML = subtasks.map(subtask => `
-                <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
-                    <input type="checkbox"
-                           class="subtask-checkbox"
-                           ${subtask.completed ? 'checked' : ''}
-                           onchange="toggleSubtask('grammar', ${subtask.id})">
-                    <span class="subtask-label-text">${subtask.name}</span>
-                </label>
-            `).join('');
+            container.innerHTML = subtasks.map(subtask => {
+                const inQueue = isTaskInQueue('grammar', subtask.id);
+                const escapedName = subtask.name.replace(/'/g, "\\'");
+                return `
+                    <div class="subtask-item-wrapper">
+                        <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
+                            <input type="checkbox"
+                                   class="subtask-checkbox"
+                                   ${subtask.completed ? 'checked' : ''}
+                                   onchange="toggleSubtask('grammar', ${subtask.id})">
+                            <span class="subtask-label-text">${subtask.name}</span>
+                        </label>
+                        <button class="add-to-queue-btn ${inQueue ? 'in-queue' : ''}"
+                                onclick="addTaskToQueue('grammar', ${subtask.id}, '${escapedName}')"
+                                ${inQueue ? 'disabled title="実行中"' : 'title="キューに追加"'}
+                                type="button">
+                            ${inQueue ? '⏳' : '➕'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Render practice subtasks (list style)
@@ -650,15 +1020,27 @@
             const container = document.getElementById('practice-subtasks-list');
             if (!container) return;
 
-            container.innerHTML = subtasks.map(subtask => `
-                <label class="subtask-list-item ${subtask.completed ? 'completed' : ''}">
-                    <input type="checkbox"
-                           class="subtask-list-checkbox"
-                           ${subtask.completed ? 'checked' : ''}
-                           onchange="toggleSubtask('practice', ${subtask.id})">
-                    <span class="subtask-list-label">${subtask.name}</span>
-                </label>
-            `).join('');
+            container.innerHTML = subtasks.map(subtask => {
+                const inQueue = isTaskInQueue('practice', subtask.id);
+                const escapedName = subtask.name.replace(/'/g, "\\'");
+                return `
+                    <div class="subtask-list-item-wrapper">
+                        <label class="subtask-list-item ${subtask.completed ? 'completed' : ''}">
+                            <input type="checkbox"
+                                   class="subtask-list-checkbox"
+                                   ${subtask.completed ? 'checked' : ''}
+                                   onchange="toggleSubtask('practice', ${subtask.id})">
+                            <span class="subtask-list-label">${subtask.name}</span>
+                        </label>
+                        <button class="add-to-queue-btn ${inQueue ? 'in-queue' : ''}"
+                                onclick="addTaskToQueue('practice', ${subtask.id}, '${escapedName}')"
+                                ${inQueue ? 'disabled title="実行中"' : 'title="キューに追加"'}
+                                type="button">
+                            ${inQueue ? '⏳' : '➕'}
+                        </button>
+                    </div>
+                `;
+            }).join('');
         }
 
         // Toggle subtask completion
@@ -668,6 +1050,13 @@
             if (subtask) {
                 subtask.completed = !subtask.completed;
                 saveSubtasks(kpiId, subtasks);
+
+                // Sync with task queue - if subtask is completed and in queue, remove from queue
+                if (subtask.completed) {
+                    let queue = getTaskQueue();
+                    queue = queue.filter(t => !(t.kpiId === kpiId && t.subtaskId === subtaskId));
+                    saveTaskQueue(queue);
+                }
 
                 // Recalculate KPI value based on completed count
                 const completedCount = subtasks.filter(t => t.completed).length;
@@ -690,6 +1079,9 @@
                 if (kpiId === 'vocab') renderVocabSubtasks();
                 else if (kpiId === 'grammar') renderGrammarSubtasks();
                 else if (kpiId === 'practice') renderPracticeSubtasks();
+
+                // Re-render task queue
+                renderTaskQueue();
 
                 updateDisplay(kpiId, newValue);
                 updateKgiProgress();
@@ -801,6 +1193,7 @@
                 updateImportanceDisplay(kpiId);
             });
             initializeSubtasks();
+            renderTaskQueue();
             updateKgiProgress();
         }
 
@@ -876,7 +1269,10 @@
                     updateDisplay(kpiId, initialValues[kpiId]);
                     updateImportanceDisplay(kpiId);
                 });
+                // Reset task queue as well
+                localStorage.removeItem('kgi_task_queue');
                 initializeSubtasks();
+                renderTaskQueue();
                 updateKgiProgress();
             }
         }

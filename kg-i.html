@@ -129,8 +129,8 @@
             align-items: center;
         }
         .control-btn {
-            width: 40px;
-            height: 40px;
+            width: 44px;
+            height: 44px;
             border: none;
             border-radius: 5px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -140,6 +140,9 @@
             cursor: pointer;
             transition: transform 0.2s, box-shadow 0.2s;
             box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .control-btn:hover {
             transform: translateY(-2px);
@@ -148,11 +151,24 @@
         .control-btn:active {
             transform: translateY(0);
         }
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .control-btn:disabled:hover {
+            transform: none;
+            box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+        }
         .current-value {
             min-width: 60px;
             text-align: center;
             font-weight: bold;
             color: #333;
+        }
+        .current-value-preview {
+            font-size: 12px;
+            color: #999;
+            margin-top: 4px;
         }
         .kpi-title-section {
             display: flex;
@@ -1063,6 +1079,21 @@
             localStorage.setItem(storageKey, JSON.stringify(subtasks));
         }
 
+        // Update subtask completion counter in header
+        function updateSubtaskCounter(kpiId) {
+            const subtasks = getSubtasks(kpiId);
+            const completed = subtasks.filter(s => s.completed).length;
+            const total = subtasks.length;
+
+            const header = document.querySelector(`#${kpiId}-subtasks .subtasks-header`);
+            if (header) {
+                const label = header.querySelector('.subtasks-label');
+                if (label) {
+                    label.textContent = `サブタスク (${completed}/${total})`;
+                }
+            }
+        }
+
         // Render vocabulary subtasks
         function renderVocabSubtasks() {
             const subtasks = getSubtasks('vocab');
@@ -1090,6 +1121,7 @@
                     </div>
                 `;
             }).join('');
+            updateSubtaskCounter('vocab');
         }
 
         // Render grammar subtasks
@@ -1119,6 +1151,7 @@
                     </div>
                 `;
             }).join('');
+            updateSubtaskCounter('grammar');
         }
 
         // Render practice subtasks (list style)
@@ -1148,6 +1181,7 @@
                     </div>
                 `;
             }).join('');
+            updateSubtaskCounter('practice');
         }
 
         // Toggle subtask completion
@@ -1366,6 +1400,18 @@
             }
         }
 
+        function updateButtonStates(kpiId, currentValue, targetValue) {
+            const buttons = document.querySelectorAll(`[onclick*="updateKPI('${kpiId}'"]`);
+            buttons.forEach(btn => {
+                const isDecrement = btn.textContent.includes('−');
+                if (isDecrement) {
+                    btn.disabled = currentValue <= 0;
+                } else {
+                    btn.disabled = currentValue >= targetValue;
+                }
+            });
+        }
+
         function updateKPI(kpiId, delta) {
             if (!kgiStore) {
                 console.error('KGIStore not initialized');
@@ -1398,6 +1444,7 @@
                         document.getElementById(`${kpiId}-bar`).style.width = percentage + '%';
                         document.getElementById(`${kpiId}-percentage`).textContent = percentage + '%';
                     }
+                    updateButtonStates(kpiId, value, target);
                 }
                 return;
             }
@@ -1415,6 +1462,8 @@
             if (progressElement) {
                 progressElement.textContent = value;
             }
+
+            updateButtonStates(kpiId, value, target);
 
             const barElement = document.getElementById(`${kpiId}-bar`) || document.getElementById(`${kpi._migratedFrom}-bar`);
             if (barElement) {

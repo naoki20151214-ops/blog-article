@@ -284,10 +284,10 @@ class KGIStore {
     }
 
     // If auto-sync is enabled, update KPI value
-    if (task && task.autoSyncValue && !task.completed) {
+    if (task && task.autoSyncValue && task.completed) {
       // Task was just completed, increment KPI
       this.incrementKPI(queueItem.kpiId, task.autoSyncValue);
-    } else if (task && task.autoSyncValue && task.completed) {
+    } else if (task && task.autoSyncValue && !task.completed) {
       // Task was just uncompleted, decrement KPI
       this.decrementKPI(queueItem.kpiId, task.autoSyncValue);
     }

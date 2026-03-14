@@ -1079,6 +1079,21 @@
             localStorage.setItem(storageKey, JSON.stringify(subtasks));
         }
 
+        // Update subtask completion counter in header
+        function updateSubtaskCounter(kpiId) {
+            const subtasks = getSubtasks(kpiId);
+            const completed = subtasks.filter(s => s.completed).length;
+            const total = subtasks.length;
+
+            const header = document.querySelector(`#${kpiId}-subtasks .subtasks-header`);
+            if (header) {
+                const label = header.querySelector('.subtasks-label');
+                if (label) {
+                    label.textContent = `サブタスク (${completed}/${total})`;
+                }
+            }
+        }
+
         // Render vocabulary subtasks
         function renderVocabSubtasks() {
             const subtasks = getSubtasks('vocab');
@@ -1106,6 +1121,7 @@
                     </div>
                 `;
             }).join('');
+            updateSubtaskCounter('vocab');
         }
 
         // Render grammar subtasks
@@ -1135,6 +1151,7 @@
                     </div>
                 `;
             }).join('');
+            updateSubtaskCounter('grammar');
         }
 
         // Render practice subtasks (list style)
@@ -1164,6 +1181,7 @@
                     </div>
                 `;
             }).join('');
+            updateSubtaskCounter('practice');
         }
 
         // Toggle subtask completion

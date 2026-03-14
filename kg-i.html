@@ -191,6 +191,14 @@
 
             <div class="goal-section">
                 <p class="goal-title">🎯 来週のテストで100点を取る</p>
+                <div style="margin-top: 20px;">
+                    <p style="margin: 10px 0; font-size: 16px;">KGI全体進捗</p>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="kgi-bar" style="width: 0%;">
+                            <span id="kgi-percentage">0%</span>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="kpis-grid">
@@ -266,11 +274,36 @@
             practice: { target: 3, storageKey: 'kgi_practice' }
         };
 
+        const kpiWeights = {
+            vocab: 33.33,
+            grammar: 33.33,
+            practice: 33.34
+        };
+
         const initialValues = {
             vocab: 45,
             grammar: 28,
             practice: 1
         };
+
+        function calculateKgiProgress() {
+            let totalProgress = 0;
+            Object.keys(kpiConfig).forEach(kpiId => {
+                const storageKey = kpiConfig[kpiId].storageKey;
+                const target = kpiConfig[kpiId].target;
+                const current = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
+                const progress = (current / target) * 100;
+                const weight = kpiWeights[kpiId] / 100;
+                totalProgress += progress * weight;
+            });
+            return Math.round(totalProgress);
+        }
+
+        function updateKgiProgress() {
+            const kgiProgress = calculateKgiProgress();
+            document.getElementById('kgi-bar').style.width = kgiProgress + '%';
+            document.getElementById('kgi-percentage').textContent = kgiProgress + '%';
+        }
 
         function loadKPIs() {
             Object.keys(kpiConfig).forEach(kpiId => {
@@ -279,6 +312,7 @@
                 const value = stored !== null ? parseInt(stored) : initialValues[kpiId];
                 updateDisplay(kpiId, value);
             });
+            updateKgiProgress();
         }
 
         function updateKPI(kpiId, delta) {
@@ -291,6 +325,7 @@
 
             localStorage.setItem(storageKey, current);
             updateDisplay(kpiId, current);
+            updateKgiProgress();
         }
 
         function updateDisplay(kpiId, value) {
@@ -311,6 +346,7 @@
                     localStorage.removeItem(storageKey);
                     updateDisplay(kpiId, initialValues[kpiId]);
                 });
+                updateKgiProgress();
             }
         }
 

@@ -860,9 +860,12 @@
                     mappedTaskId = 'task_' + (subtaskId + 11);
                 } else if (kpiId === 'practice') {
                     mappedTaskId = 'task_' + (subtaskId + 16);
+                } else {
+                    // Unknown kpiId, skip new system check
+                    return false;
                 }
 
-                if (kgiStore.isTaskInQueue(mappedKpiId, mappedTaskId)) {
+                if (mappedTaskId && kgiStore.isTaskInQueue(mappedKpiId, mappedTaskId)) {
                     return true;
                 }
             }
@@ -919,17 +922,21 @@
                     mappedTaskId = 'task_' + (taskId + 16);  // 0→task_16, 1→task_17, 2→task_18
                 }
 
+                if (!mappedTaskId || !mappedKpiId) {
+                    throw new Error('Invalid kpiId: ' + legacyKpiId);
+                }
+
                 kgiStore.addTaskToQueue(mappedKpiId, mappedTaskId);
                 renderTaskQueue();
 
                 // Update subtask rendering to show button status
-                const kpis = configManager.getKPIs();
-                const kpi = kpis.find(k => k.id === mappedKpiId);
-                if (kpi && kpi._migratedFrom) {
-                    if (kpi._migratedFrom === 'vocab') renderVocabSubtasks();
-                    else if (kpi._migratedFrom === 'grammar') renderGrammarSubtasks();
-                    else if (kpi._migratedFrom === 'practice') renderPracticeSubtasks();
-                }
+                // Map back to legacy system for re-rendering
+                const legacyIdMap = { 'kpi_1': 'vocab', 'kpi_2': 'grammar', 'kpi_3': 'practice' };
+                const legacyId = legacyIdMap[mappedKpiId];
+
+                if (legacyId === 'vocab') renderVocabSubtasks();
+                else if (legacyId === 'grammar') renderGrammarSubtasks();
+                else if (legacyId === 'practice') renderPracticeSubtasks();
             } catch (error) {
                 alert(error.message || 'タスクの追加に失敗しました');
                 console.error('Error adding task to queue:', error);
@@ -1030,7 +1037,7 @@
                     <label class="task-queue-item">
                         <div class="task-queue-item-info">
                             <div class="task-queue-item-kpi">${kpiEmoji} ${kpiName}</div>
-                            <div class="task-queue-item-name">${task.subtaskName}</div>
+                            <div class="task-queue-item-name">${task.subtaskName || task.taskName}</div>
                         </div>
                         <input type="checkbox"
                                class="task-queue-item-checkbox"

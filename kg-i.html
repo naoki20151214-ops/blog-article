@@ -246,6 +246,118 @@
         .reset-btn:hover {
             background: #777;
         }
+        .add-kpi-btn {
+            padding: 12px;
+            margin-top: 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+            flex: 1;
+        }
+        .add-kpi-btn:hover {
+            background: #5568d3;
+        }
+        /* Custom KPI Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal.show {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        .modal-form-group {
+            margin-bottom: 15px;
+        }
+        .modal-form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        .modal-form-group input,
+        .modal-form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        .emoji-picker {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+            margin-top: 5px;
+        }
+        .emoji-option {
+            padding: 8px 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            background: white;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.3s;
+        }
+        .emoji-option:hover,
+        .emoji-option.selected {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 25px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        .modal-btn-submit {
+            background: #667eea;
+            color: white;
+        }
+        .modal-btn-submit:hover {
+            background: #5568d3;
+        }
+        .modal-btn-cancel {
+            background: #ddd;
+            color: #333;
+        }
+        .modal-btn-cancel:hover {
+            background: #bbb;
+        }
         /* Subtasks Container */
         .subtasks-container {
             margin: 15px 0;
@@ -741,7 +853,15 @@
                 </div>
             </div>
 
-            <button class="reset-btn" onclick="resetKPIs()">進捗をリセット</button>
+            <!-- Custom KPIs Container -->
+            <div class="kpis-grid" id="custom-kpis-container">
+                <!-- Custom KPIs will be rendered here -->
+            </div>
+
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="reset-btn" onclick="resetKPIs()">進捗をリセット</button>
+                <button class="add-kpi-btn" onclick="openCustomKPIModal()">＋ カスタムKPI追加</button>
+            </div>
 
             <!-- Task Queue Section -->
             <div class="task-queue-section" id="task-queue-section">
@@ -752,6 +872,58 @@
                 </div>
                 <div class="task-queue-list" id="task-queue-list">
                     <div class="task-queue-empty">タスクはありません</div>
+                </div>
+            </div>
+
+            <!-- Custom KPI Modal -->
+            <div id="custom-kpi-modal" class="modal">
+                <div class="modal-content">
+                    <div class="modal-header">カスタムKPI追加</div>
+                    <form id="custom-kpi-form" onsubmit="submitCustomKPI(event)">
+                        <div class="modal-form-group">
+                            <label>KPIの名前</label>
+                            <input type="text" id="kpi-name-input" placeholder="例: 読書時間" required>
+                        </div>
+
+                        <div class="modal-form-group">
+                            <label>絵文字を選択</label>
+                            <div class="emoji-picker" id="emoji-picker">
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '📚')">📚</button>
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '📖')">📖</button>
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '✏️')">✏️</button>
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '📊')">📊</button>
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '🎯')">🎯</button>
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '⭐')">⭐</button>
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '💪')">💪</button>
+                                <button type="button" class="emoji-option" onclick="selectEmoji(this, '🚀')">🚀</button>
+                            </div>
+                            <input type="hidden" id="kpi-emoji-input" value="📊">
+                        </div>
+
+                        <div class="modal-form-group">
+                            <label>目標値</label>
+                            <input type="number" id="kpi-target-input" placeholder="例: 100" min="1" required>
+                        </div>
+
+                        <div class="modal-form-group">
+                            <label>単位</label>
+                            <input type="text" id="kpi-unit-input" placeholder="例: 冊、時間、個" required>
+                        </div>
+
+                        <div class="modal-form-group">
+                            <label>重要度</label>
+                            <select id="kpi-importance-input">
+                                <option value="A">A (高)</option>
+                                <option value="B" selected>B (中)</option>
+                                <option value="C">C (低)</option>
+                            </select>
+                        </div>
+
+                        <div class="modal-buttons">
+                            <button type="submit" class="modal-btn modal-btn-submit">追加</button>
+                            <button type="button" class="modal-btn modal-btn-cancel" onclick="closeCustomKPIModal()">キャンセル</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -1019,17 +1191,21 @@
             const sorted = [...queue].sort((a, b) => a.addedAt - b.addedAt);
 
             container.innerHTML = sorted.map(task => {
+                // Map new KPI IDs to legacy format for display
+                const legacyIdMap = { 'kpi_1': 'vocab', 'kpi_2': 'grammar', 'kpi_3': 'practice' };
+                const displayKpiId = legacyIdMap[task.kpiId] || task.kpiId;
+
                 const kpiEmoji = {
                     vocab: '📚',
                     grammar: '📖',
                     practice: '✏️'
-                }[task.kpiId] || '📋';
+                }[displayKpiId] || '📋';
 
                 const kpiName = {
                     vocab: '英単語',
                     grammar: '英文法',
                     practice: '過去問'
-                }[task.kpiId] || 'その他';
+                }[displayKpiId] || 'その他';
 
                 const escapedQueueId = task.queueId.replace(/'/g, "\\'");
 
@@ -1432,6 +1608,9 @@
                 updateImportanceDisplay(kpi.id);
             });
 
+            // Render custom KPIs
+            renderCustomKPIs(kpis);
+
             initializeSubtasks();
             renderTaskQueue();
             updateKgiProgress();
@@ -1641,6 +1820,212 @@
                         console.error('Error resetting KPIs:', error);
                     }
                 }
+            }
+        }
+
+        // ===== CUSTOM KPI MANAGEMENT =====
+
+        function openCustomKPIModal() {
+            const modal = document.getElementById('custom-kpi-modal');
+            modal.classList.add('show');
+        }
+
+        function closeCustomKPIModal() {
+            const modal = document.getElementById('custom-kpi-modal');
+            modal.classList.remove('show');
+            // Reset form
+            document.getElementById('custom-kpi-form').reset();
+            document.getElementById('kpi-emoji-input').value = '📊';
+            document.querySelectorAll('.emoji-option').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+        }
+
+        function selectEmoji(element, emoji) {
+            // Remove selected class from all buttons
+            document.querySelectorAll('.emoji-option').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+            // Add selected class to clicked button
+            element.classList.add('selected');
+            // Update hidden input
+            document.getElementById('kpi-emoji-input').value = emoji;
+        }
+
+        function submitCustomKPI(event) {
+            event.preventDefault();
+
+            if (!configManager || !kgiStore) {
+                alert('システムが初期化されていません');
+                return;
+            }
+
+            const name = document.getElementById('kpi-name-input').value;
+            const emoji = document.getElementById('kpi-emoji-input').value;
+            const target = parseInt(document.getElementById('kpi-target-input').value);
+            const unit = document.getElementById('kpi-unit-input').value;
+            const importance = document.getElementById('kpi-importance-input').value;
+
+            if (!name || !target || !unit) {
+                alert('すべてのフィールドを入力してください');
+                return;
+            }
+
+            try {
+                // Create new KPI
+                const newKPI = configManager.addKPI({
+                    name: emoji + ' ' + name,
+                    emoji: emoji,
+                    target: target,
+                    unit: unit,
+                    importance: importance,
+                    type: 'manual'
+                });
+
+                console.log('✅ Custom KPI created:', newKPI);
+
+                // Auto-create subtasks based on target
+                const taskCount = Math.max(1, Math.ceil(target / 10));
+                const chunkSize = Math.ceil(target / taskCount);
+
+                for (let i = 0; i < taskCount; i++) {
+                    const start = i * chunkSize + 1;
+                    const end = Math.min((i + 1) * chunkSize, target);
+                    const taskName = `${name} ${start}-${end}`;
+
+                    configManager.addTask({
+                        kpiId: newKPI.id,
+                        name: taskName,
+                        autoSyncValue: chunkSize,
+                        tags: ['custom']
+                    });
+                }
+
+                console.log('✅ Auto-created subtasks for custom KPI');
+
+                // Close modal and update displays
+                closeCustomKPIModal();
+                loadKPIs();
+                alert(`「${emoji} ${name}」を追加しました！`);
+            } catch (error) {
+                console.error('Error creating custom KPI:', error);
+                alert('KPI作成エラー: ' + error.message);
+            }
+        }
+
+        function renderCustomKPIs(allKpis) {
+            const container = document.getElementById('custom-kpis-container');
+            if (!container) return;
+
+            // Filter out the default 3 KPIs (kpi_1, kpi_2, kpi_3)
+            const customKpis = allKpis.filter(kpi => !['kpi_1', 'kpi_2', 'kpi_3'].includes(kpi.id));
+
+            if (customKpis.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            container.innerHTML = customKpis.map(kpi => `
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <div class="kpi-title-section">
+                            <span class="kpi-name">${kpi.emoji || '📊'} ${kpi.name}</span>
+                            <span class="kpi-importance" id="${kpi.id}-importance" onclick="toggleImportanceEdit('${kpi.id}')">${kpi.importance}</span>
+                            <div class="importance-selector" id="${kpi.id}-importance-selector">
+                                <button class="abc-option" onclick="saveImportanceLevel('${kpi.id}', 'A')">A</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('${kpi.id}', 'B')">B</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('${kpi.id}', 'C')">C</button>
+                            </div>
+                        </div>
+                        <button class="importance-edit-btn" onclick="toggleImportanceEdit('${kpi.id}')">✏️</button>
+                    </div>
+                    <div class="progress-info">
+                        <span id="${kpi.id}-progress">${kpi.current}</span> / ${kpi.target}${kpi.unit}
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="${kpi.id}-bar" style="width: ${Math.round((kpi.current / kpi.target) * 100)}%;">
+                            <span id="${kpi.id}-percentage">${Math.round((kpi.current / kpi.target) * 100)}%</span>
+                        </div>
+                    </div>
+                    <div class="subtasks-container" id="${kpi.id}-subtasks">
+                        <div class="subtasks-header">
+                            <span class="subtasks-label">サブタスク</span>
+                            <button class="subtasks-toggle-btn" onclick="toggleSubtasksView('${kpi.id}')">▼</button>
+                        </div>
+                        <div class="subtasks-grid" id="${kpi.id}-subtasks-grid">
+                            <!-- Rendered by JavaScript -->
+                        </div>
+                    </div>
+                    <div class="kpi-controls">
+                        <button class="control-btn" onclick="updateKPI('${kpi.id}', -1)">−</button>
+                        <div class="current-value" id="${kpi.id}-display">${kpi.current}</div>
+                        <button class="control-btn" onclick="updateKPI('${kpi.id}', 1)">＋</button>
+                    </div>
+                    <button class="delete-kpi-btn" onclick="deleteCustomKPI('${kpi.id}')" style="margin-top: 10px; padding: 8px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%;">削除</button>
+                </div>
+            `).join('');
+
+            // Render subtasks for custom KPIs
+            customKpis.forEach(kpi => {
+                renderCustomKPISubtasks(kpi.id);
+            });
+        }
+
+        function renderCustomKPISubtasks(kpiId) {
+            const kpi = configManager.getKPI(kpiId);
+            if (!kpi) return;
+
+            const tasks = configManager.getTasksByKPI(kpiId);
+            const container = document.getElementById(`${kpiId}-subtasks-grid`);
+            if (!container) return;
+
+            if (tasks.length === 0) {
+                container.innerHTML = '<div style="padding: 10px; color: #999;">タスクがありません</div>';
+                return;
+            }
+
+            container.innerHTML = tasks.map((task, index) => `
+                <label class="subtask-button" style="display: flex; align-items: center; padding: 8px; cursor: pointer; border-radius: 5px; background: ${task.completed ? '#d4edda' : '#f0f0f0'}; margin-bottom: 5px;">
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleCustomKPISubtask('${kpiId}', '${task.id}')" style="margin-right: 8px;">
+                    <span>${task.name}</span>
+                </label>
+            `).join('');
+        }
+
+        function toggleCustomKPISubtask(kpiId, taskId) {
+            if (!kgiStore) return;
+
+            try {
+                const task = configManager.getTask(taskId);
+                if (task) {
+                    kgiStore.toggleTaskCompletion(taskId);
+                    updateDisplay(kpiId, configManager.getKPI(kpiId).current);
+                    updateKgiProgress();
+                    renderCustomKPISubtasks(kpiId);
+                }
+            } catch (error) {
+                console.error('Error toggling custom KPI subtask:', error);
+            }
+        }
+
+        function deleteCustomKPI(kpiId) {
+            if (confirm('このKPIを削除してもよろしいですか？')) {
+                try {
+                    configManager.deleteKPI(kpiId);
+                    loadKPIs();
+                    alert('KPIを削除しました');
+                } catch (error) {
+                    console.error('Error deleting custom KPI:', error);
+                    alert('削除エラー: ' + error.message);
+                }
+            }
+        }
+
+        // Close modal when clicking outside of it
+        window.onclick = function(event) {
+            const modal = document.getElementById('custom-kpi-modal');
+            if (event.target === modal) {
+                closeCustomKPIModal();
             }
         }
 

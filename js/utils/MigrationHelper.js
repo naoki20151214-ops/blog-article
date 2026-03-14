@@ -61,6 +61,9 @@ class MigrationHelper {
     localStorage.setItem('kgi_config', JSON.stringify(newConfig));
     localStorage.setItem('kgi_config_version', '2');
 
+    // Clean up legacy storage keys after successful migration
+    this._cleanupLegacyKeys();
+
     console.log('✅ Migration complete!');
     console.log('New configuration:', newConfig);
 
@@ -266,6 +269,28 @@ class MigrationHelper {
     }
 
     return false;
+  }
+
+  /**
+   * Clean up legacy storage keys after migration
+   */
+  static _cleanupLegacyKeys() {
+    // Remove old KPI value keys
+    localStorage.removeItem('kgi_vocab');
+    localStorage.removeItem('kgi_grammar');
+    localStorage.removeItem('kgi_practice');
+
+    // Remove old importance keys
+    localStorage.removeItem('kgi_importance_vocab');
+    localStorage.removeItem('kgi_importance_grammar');
+    localStorage.removeItem('kgi_importance_practice');
+
+    // Remove old subtask keys
+    localStorage.removeItem('kgi_vocab_subtasks');
+    localStorage.removeItem('kgi_grammar_subtasks');
+    localStorage.removeItem('kgi_practice_subtasks');
+
+    console.log('✅ Cleaned up legacy storage keys');
   }
 
   /**

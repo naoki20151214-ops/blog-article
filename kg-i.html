@@ -741,7 +741,17 @@
         </div>
     </div>
 
+    <!-- Import new infrastructure classes -->
+    <script src="js/utils/MigrationHelper.js"></script>
+    <script src="js/utils/ConfigManager.js"></script>
+    <script src="js/utils/KGIStore.js"></script>
+
     <script>
+        // Initialize new system
+        let configManager = null;
+        let kgiStore = null;
+
+        // Backward compatibility: expose old config for migration
         const kpiConfig = {
             vocab: { target: 100, storageKey: 'kgi_vocab', importanceKey: 'kgi_importance_vocab' },
             grammar: { target: 50, storageKey: 'kgi_grammar', importanceKey: 'kgi_importance_grammar' },
@@ -826,57 +836,109 @@
             return queue.some(t => t.kpiId === kpiId && t.subtaskId === subtaskId);
         }
 
-        function addTaskToQueue(kpiId, subtaskId, subtaskName) {
-            // Check if task is already in queue
-            if (isTaskInQueue(kpiId, subtaskId)) {
-                alert('このタスクは既に作業キューに追加されています。');
-                return;
-            }
+        function addTaskToQueue(kpiId, taskId, taskName) {
+            if (!kgiStore) {
+                // Fallback to old system using subtaskId
+                const subtaskId = taskId;
+                const subtaskName = taskName;
+                if (isTaskInQueue(kpiId, subtaskId)) {
+                    alert('このタスクは既に作業キューに追加されています。');
+                    return;
+                }
 
-            const queue = getTaskQueue();
-            const queueId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            queue.push({
-                queueId: queueId,
-                kpiId: kpiId,
-                subtaskId: subtaskId,
-                subtaskName: subtaskName,
-                addedAt: Date.now(),
-                completed: false
-            });
+                const queue = getTaskQueue();
+                const queueId = `queue_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                queue.push({
+                    queueId: queueId,
+                    kpiId: kpiId,
+                    subtaskId: subtaskId,
+                    subtaskName: subtaskName,
+                    addedAt: Date.now(),
+                    completed: false
+                });
 
-            saveTaskQueue(queue);
-            renderTaskQueue();
+                saveTaskQueue(queue);
+                renderTaskQueue();
 
-            // Update subtask rendering to show button status
-            if (kpiId === 'vocab') renderVocabSubtasks();
-            else if (kpiId === 'grammar') renderGrammarSubtasks();
-            else if (kpiId === 'practice') renderPracticeSubtasks();
-        }
-
-        function removeTaskFromQueue(queueId) {
-            let queue = getTaskQueue();
-            queue = queue.filter(t => t.queueId !== queueId);
-            saveTaskQueue(queue);
-            renderTaskQueue();
-
-            // Update subtask rendering to show button status
-            ['vocab', 'grammar', 'practice'].forEach(kpiId => {
                 if (kpiId === 'vocab') renderVocabSubtasks();
                 else if (kpiId === 'grammar') renderGrammarSubtasks();
                 else if (kpiId === 'practice') renderPracticeSubtasks();
-            });
+                return;
+            }
+
+            // New system
+            try {
+                kgiStore.addTaskToQueue(kpiId, taskId);
+                renderTaskQueue();
+
+                // Update subtask rendering to show button status
+                const kpis = configManager.getKPIs();
+                const kpi = kpis.find(k => k.id === kpiId);
+                if (kpi && kpi._migratedFrom) {
+                    if (kpi._migratedFrom === 'vocab') renderVocabSubtasks();
+                    else if (kpi._migratedFrom === 'grammar') renderGrammarSubtasks();
+                    else if (kpi._migratedFrom === 'practice') renderPracticeSubtasks();
+                }
+            } catch (error) {
+                alert(error.message || 'タスクの追加に失敗しました');
+                console.error('Error adding task to queue:', error);
+            }
+        }
+
+        function removeTaskFromQueue(queueId) {
+            if (!kgiStore) {
+                // Fallback to old system
+                let queue = getTaskQueue();
+                queue = queue.filter(t => t.queueId !== queueId);
+                saveTaskQueue(queue);
+                renderTaskQueue();
+
+                ['vocab', 'grammar', 'practice'].forEach(kpiId => {
+                    if (kpiId === 'vocab') renderVocabSubtasks();
+                    else if (kpiId === 'grammar') renderGrammarSubtasks();
+                    else if (kpiId === 'practice') renderPracticeSubtasks();
+                });
+                return;
+            }
+
+            // New system
+            try {
+                kgiStore.removeTaskFromQueue(queueId);
+                renderTaskQueue();
+
+                // Update subtask rendering to show button status
+                const kpis = configManager.getKPIs();
+                kpis.forEach(kpi => {
+                    if (kpi._migratedFrom === 'vocab') renderVocabSubtasks();
+                    else if (kpi._migratedFrom === 'grammar') renderGrammarSubtasks();
+                    else if (kpi._migratedFrom === 'practice') renderPracticeSubtasks();
+                });
+            } catch (error) {
+                console.error('Error removing task from queue:', error);
+            }
         }
 
         function completeQueueTask(queueId) {
-            const queue = getTaskQueue();
-            const queueTask = queue.find(t => t.queueId === queueId);
+            if (!kgiStore) {
+                // Fallback to old system
+                const queue = getTaskQueue();
+                const queueTask = queue.find(t => t.queueId === queueId);
 
-            if (queueTask) {
-                // Toggle the subtask on the KPI side
-                toggleSubtask(queueTask.kpiId, queueTask.subtaskId);
+                if (queueTask) {
+                    toggleSubtask(queueTask.kpiId, queueTask.subtaskId);
+                    removeTaskFromQueue(queueId);
+                }
+                return;
+            }
 
-                // Remove from queue
-                removeTaskFromQueue(queueId);
+            // New system
+            try {
+                kgiStore.completeQueueTask(queueId);
+                renderTaskQueue();
+                updateAllDisplays();
+                updateKgiProgress();
+            } catch (error) {
+                console.error('Error completing queue task:', error);
             }
         }
 
@@ -1089,51 +1151,68 @@
         }
 
         // Toggle subtask completion
-        function toggleSubtask(kpiId, subtaskId) {
-            const subtasks = getSubtasks(kpiId);
-            const subtask = subtasks.find(t => t.id === subtaskId);
-            if (subtask) {
-                // Capture old value before modification
-                const config = kpiConfig[kpiId];
-                const oldValue = parseInt(localStorage.getItem(config.storageKey) || initialValues[kpiId]);
+        function toggleSubtask(kpiId, taskId) {
+            if (!kgiStore) {
+                // Fallback to old system using subtaskId
+                const subtaskId = taskId;
+                const subtasks = getSubtasks(kpiId);
+                const subtask = subtasks.find(t => t.id === subtaskId);
+                if (subtask) {
+                    const config = kpiConfig[kpiId];
+                    const oldValue = parseInt(localStorage.getItem(config.storageKey) || initialValues[kpiId]);
 
-                subtask.completed = !subtask.completed;
-                saveSubtasks(kpiId, subtasks);
+                    subtask.completed = !subtask.completed;
+                    saveSubtasks(kpiId, subtasks);
 
-                // Sync with task queue - if subtask is completed and in queue, remove from queue
-                if (subtask.completed) {
-                    let queue = getTaskQueue();
-                    queue = queue.filter(t => !(t.kpiId === kpiId && t.subtaskId === subtaskId));
-                    saveTaskQueue(queue);
+                    if (subtask.completed) {
+                        let queue = getTaskQueue();
+                        queue = queue.filter(t => !(t.kpiId === kpiId && t.subtaskId === subtaskId));
+                        saveTaskQueue(queue);
+                    }
+
+                    const completedCount = subtasks.filter(t => t.completed).length;
+                    let newValue;
+
+                    if (kpiId === 'vocab') {
+                        newValue = completedCount * 10;
+                    } else if (kpiId === 'grammar') {
+                        newValue = completedCount * 10;
+                    } else if (kpiId === 'practice') {
+                        newValue = completedCount;
+                    }
+
+                    newValue = Math.max(0, Math.min(config.target, newValue));
+                    recordChange(kpiId, oldValue, newValue, 'subtask', subtaskId);
+                    localStorage.setItem(config.storageKey, newValue);
+
+                    if (kpiId === 'vocab') renderVocabSubtasks();
+                    else if (kpiId === 'grammar') renderGrammarSubtasks();
+                    else if (kpiId === 'practice') renderPracticeSubtasks();
+
+                    renderTaskQueue();
+
+                    updateDisplay(kpiId, newValue);
+                    updateKgiProgress();
                 }
+                return;
+            }
 
-                // Recalculate KPI value based on completed count
-                const completedCount = subtasks.filter(t => t.completed).length;
-                let newValue;
-
-                if (kpiId === 'vocab') {
-                    newValue = completedCount * 10;
-                } else if (kpiId === 'grammar') {
-                    newValue = completedCount * 10;
-                } else if (kpiId === 'practice') {
-                    newValue = completedCount;
-                }
-
-                // Save and update
-                newValue = Math.max(0, Math.min(config.target, newValue));
-                recordChange(kpiId, oldValue, newValue, 'subtask', subtaskId);
-                localStorage.setItem(config.storageKey, newValue);
-
-                // Re-render
-                if (kpiId === 'vocab') renderVocabSubtasks();
-                else if (kpiId === 'grammar') renderGrammarSubtasks();
-                else if (kpiId === 'practice') renderPracticeSubtasks();
-
-                // Re-render task queue
-                renderTaskQueue();
-
-                updateDisplay(kpiId, newValue);
+            // New system
+            try {
+                kgiStore.toggleTaskCompletion(taskId);
+                updateAllDisplays();
                 updateKgiProgress();
+
+                // Re-render all subtask views
+                const kpis = configManager.getKPIs();
+                kpis.forEach(kpi => {
+                    if (kpi._migratedFrom === 'vocab') renderVocabSubtasks();
+                    else if (kpi._migratedFrom === 'grammar') renderGrammarSubtasks();
+                    else if (kpi._migratedFrom === 'practice') renderPracticeSubtasks();
+                });
+                renderTaskQueue();
+            } catch (error) {
+                console.error('Error toggling subtask:', error);
             }
         }
 
@@ -1210,17 +1289,23 @@
         }
 
         function calculateKgiProgress() {
-            const importancePercentages = convertABCToWeights();
-            let totalProgress = 0;
-            Object.keys(kpiConfig).forEach(kpiId => {
-                const storageKey = kpiConfig[kpiId].storageKey;
-                const target = kpiConfig[kpiId].target;
-                const current = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
-                const progress = (current / target) * 100;
-                const weight = importancePercentages[kpiId] / 100;
-                totalProgress += progress * weight;
-            });
-            return Math.round(totalProgress);
+            if (!kgiStore) {
+                // Fallback to old system
+                const importancePercentages = convertABCToWeights();
+                let totalProgress = 0;
+                Object.keys(kpiConfig).forEach(kpiId => {
+                    const storageKey = kpiConfig[kpiId].storageKey;
+                    const target = kpiConfig[kpiId].target;
+                    const current = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
+                    const progress = (current / target) * 100;
+                    const weight = importancePercentages[kpiId] / 100;
+                    totalProgress += progress * weight;
+                });
+                return Math.round(totalProgress);
+            }
+
+            // New system
+            return kgiStore.calculateKGIProgress();
         }
 
         function updateKgiProgress() {
@@ -1238,78 +1323,178 @@
             });
         }
 
-        function loadKPIs() {
-            // Initialize history tracking if not present
-            if (localStorage.getItem('kgi_history') === null) {
-                localStorage.setItem('kgi_history', JSON.stringify([]));
-            }
+        function initializeNewSystem() {
+            // Initialize ConfigManager
+            configManager = new ConfigManager();
+            configManager.initialize();
 
-            // Migration: Create initial records for existing KPI data
-            const history = getChangeHistory();
-            if (history.length === 0) {
-                Object.keys(kpiConfig).forEach(kpiId => {
-                    const storageKey = kpiConfig[kpiId].storageKey;
-                    const stored = localStorage.getItem(storageKey);
-                    if (stored !== null) {
-                        const value = parseInt(stored);
-                        if (value > 0) {
-                            recordChange(kpiId, 0, value, 'migration', null);
-                        }
-                    }
-                });
-            }
+            // Initialize KGIStore
+            kgiStore = new KGIStore(configManager);
 
-            loadImportances();
-            Object.keys(kpiConfig).forEach(kpiId => {
-                const storageKey = kpiConfig[kpiId].storageKey;
-                const stored = localStorage.getItem(storageKey);
-                const value = stored !== null ? parseInt(stored) : initialValues[kpiId];
-                updateDisplay(kpiId, value);
-                updateImportanceDisplay(kpiId);
+            // Subscribe to store changes
+            kgiStore.subscribe((eventType, data) => {
+                console.log('Store event:', eventType, data);
+                // Re-render UI when store changes
+                if (eventType === 'kpi_value_changed') {
+                    updateAllDisplays();
+                    updateKgiProgress();
+                }
             });
+
+            console.log('✅ New system initialized');
+            console.log('Config:', configManager.getConfig());
+        }
+
+        function loadKPIs() {
+            // Initialize new system (includes auto-migration)
+            initializeNewSystem();
+
+            // Update all displays based on current values
+            const kpis = configManager.getKPIs();
+            kpis.forEach(kpi => {
+                updateDisplay(kpi.id, kpi.current);
+                updateImportanceDisplay(kpi.id);
+            });
+
             initializeSubtasks();
             renderTaskQueue();
             updateKgiProgress();
+
+            // Notify user if migration occurred
+            if (localStorage.getItem('kgi_config_version') === '2' && configManager.getConfig().migratedAt) {
+                console.log('✅ Data migration completed successfully');
+            }
         }
 
         function updateKPI(kpiId, delta) {
-            const config = kpiConfig[kpiId];
-            const storageKey = config.storageKey;
-            const target = config.target;
+            if (!kgiStore) {
+                console.error('KGIStore not initialized');
+                return;
+            }
 
-            let oldValue = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
-            let newValue = Math.max(0, Math.min(target, oldValue + delta));
-
-            recordChange(kpiId, oldValue, newValue, 'button');
-            localStorage.setItem(storageKey, newValue);
-            syncSubtasksToValue(kpiId, newValue);
-            updateDisplay(kpiId, newValue);
-            updateKgiProgress();
+            try {
+                const newValue = kgiStore.incrementKPI(kpiId, delta);
+                updateDisplay(kpiId, newValue);
+                updateKgiProgress();
+            } catch (error) {
+                console.error('Error updating KPI:', error);
+            }
         }
 
         function updateDisplay(kpiId, value) {
-            const config = kpiConfig[kpiId];
-            const target = config.target;
+            if (!configManager) return;
+
+            const kpi = configManager.getKPI(kpiId);
+            if (!kpi) {
+                // Handle legacy KPI IDs (vocab, grammar, practice)
+                const legacyConfig = kpiConfig[kpiId];
+                if (legacyConfig) {
+                    const target = legacyConfig.target;
+                    const percentage = Math.round((value / target) * 100);
+                    const element = document.getElementById(`${kpiId}-display`);
+                    if (element) {
+                        element.textContent = value;
+                        document.getElementById(`${kpiId}-progress`).textContent = value;
+                        document.getElementById(`${kpiId}-bar`).style.width = percentage + '%';
+                        document.getElementById(`${kpiId}-percentage`).textContent = percentage + '%';
+                    }
+                }
+                return;
+            }
+
+            const target = kpi.target;
             const percentage = Math.round((value / target) * 100);
 
-            document.getElementById(`${kpiId}-display`).textContent = value;
-            document.getElementById(`${kpiId}-progress`).textContent = value;
-            document.getElementById(`${kpiId}-bar`).style.width = percentage + '%';
-            document.getElementById(`${kpiId}-percentage`).textContent = percentage + '%';
+            // Try both new and old ID formats
+            const displayElement = document.getElementById(`${kpiId}-display`) || document.getElementById(`${kpi._migratedFrom}-display`);
+            if (displayElement) {
+                displayElement.textContent = value;
+            }
+
+            const progressElement = document.getElementById(`${kpiId}-progress`) || document.getElementById(`${kpi._migratedFrom}-progress`);
+            if (progressElement) {
+                progressElement.textContent = value;
+            }
+
+            const barElement = document.getElementById(`${kpiId}-bar`) || document.getElementById(`${kpi._migratedFrom}-bar`);
+            if (barElement) {
+                barElement.style.width = percentage + '%';
+            }
+
+            const percentageElement = document.getElementById(`${kpiId}-percentage`) || document.getElementById(`${kpi._migratedFrom}-percentage`);
+            if (percentageElement) {
+                percentageElement.textContent = percentage + '%';
+            }
+        }
+
+        function updateAllDisplays() {
+            if (!configManager) return;
+            const kpis = configManager.getKPIs();
+            kpis.forEach(kpi => {
+                updateDisplay(kpi.id, kpi.current);
+                updateDisplay(kpi._migratedFrom, kpi.current);
+            });
         }
 
         function saveImportanceLevel(kpiId, level) {
-            const importanceKey = kpiConfig[kpiId].importanceKey;
-            localStorage.setItem(importanceKey, level);
-            updateImportanceDisplay(kpiId);
-            toggleImportanceEdit(kpiId);
-            updateKgiProgress();
+            if (!configManager) {
+                const importanceKey = kpiConfig[kpiId].importanceKey;
+                localStorage.setItem(importanceKey, level);
+                updateImportanceDisplay(kpiId);
+                toggleImportanceEdit(kpiId);
+                updateKgiProgress();
+                return;
+            }
+
+            try {
+                // Find KPI by legacy ID or new ID
+                let kpi = configManager.getKPI(kpiId);
+                if (!kpi) {
+                    // Try to find by migrated from field
+                    const kpis = configManager.getKPIs();
+                    kpi = kpis.find(k => k._migratedFrom === kpiId);
+                }
+
+                if (kpi) {
+                    configManager.updateKPI(kpi.id, { importance: level });
+                    updateImportanceDisplay(kpiId);
+                    toggleImportanceEdit(kpiId);
+                    updateKgiProgress();
+                } else {
+                    console.error('KPI not found:', kpiId);
+                }
+            } catch (error) {
+                console.error('Error saving importance level:', error);
+            }
         }
 
         function updateImportanceDisplay(kpiId) {
-            const importances = getImportanceLevels();
-            const importance = importances[kpiId];
-            document.getElementById(`${kpiId}-importance`).textContent = importance;
+            if (!configManager) {
+                const importances = getImportanceLevels();
+                const importance = importances[kpiId];
+                const element = document.getElementById(`${kpiId}-importance`);
+                if (element) {
+                    element.textContent = importance;
+                }
+                return;
+            }
+
+            // First try new system
+            const kpi = configManager.getKPI(kpiId);
+            if (kpi) {
+                const element = document.getElementById(`${kpiId}-importance`) || document.getElementById(`${kpi._migratedFrom}-importance`);
+                if (element) {
+                    element.textContent = kpi.importance;
+                }
+            } else {
+                // Fall back to legacy
+                const importances = getImportanceLevels();
+                const importance = importances[kpiId];
+                const element = document.getElementById(`${kpiId}-importance`);
+                if (element) {
+                    element.textContent = importance;
+                }
+            }
         }
 
         function toggleImportanceEdit(kpiId) {
@@ -1335,26 +1520,36 @@
 
         function resetKPIs() {
             if (confirm('進捗とタスク重要度をリセットしてもよろしいですか？')) {
-                Object.keys(kpiConfig).forEach(kpiId => {
-                    const storageKey = kpiConfig[kpiId].storageKey;
-                    const importanceKey = kpiConfig[kpiId].importanceKey;
-
-                    // Record reset change before clearing
-                    const oldValue = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
-                    recordChange(kpiId, oldValue, 0, 'reset', null);
-
-                    localStorage.removeItem(storageKey);
-                    localStorage.removeItem(importanceKey);
-                    localStorage.removeItem(`kgi_${kpiId}_subtasks`);
-                    localStorage.setItem(importanceKey, defaultImportance[kpiId]);
-                    updateDisplay(kpiId, initialValues[kpiId]);
-                    updateImportanceDisplay(kpiId);
-                });
-                // Reset task queue as well
-                localStorage.removeItem('kgi_task_queue');
-                initializeSubtasks();
-                renderTaskQueue();
-                updateKgiProgress();
+                if (!kgiStore) {
+                    // Fallback to old system
+                    Object.keys(kpiConfig).forEach(kpiId => {
+                        const storageKey = kpiConfig[kpiId].storageKey;
+                        const importanceKey = kpiConfig[kpiId].importanceKey;
+                        const oldValue = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
+                        recordChange(kpiId, oldValue, 0, 'reset', null);
+                        localStorage.removeItem(storageKey);
+                        localStorage.removeItem(importanceKey);
+                        localStorage.removeItem(`kgi_${kpiId}_subtasks`);
+                        localStorage.setItem(importanceKey, defaultImportance[kpiId]);
+                        updateDisplay(kpiId, initialValues[kpiId]);
+                        updateImportanceDisplay(kpiId);
+                    });
+                    localStorage.removeItem('kgi_task_queue');
+                    initializeSubtasks();
+                    renderTaskQueue();
+                    updateKgiProgress();
+                } else {
+                    // New system
+                    try {
+                        kgiStore.resetAll();
+                        updateAllDisplays();
+                        initializeSubtasks();
+                        renderTaskQueue();
+                        updateKgiProgress();
+                    } catch (error) {
+                        console.error('Error resetting KPIs:', error);
+                    }
+                }
             }
         }
 

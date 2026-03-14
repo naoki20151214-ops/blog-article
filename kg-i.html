@@ -1113,13 +1113,19 @@
 
         // Toggle subtasks view (expand/collapse)
         function toggleSubtasksView(kpiId) {
-            const container = document.getElementById(`${kpiId}-subtasks`);
-            const btn = container.querySelector('.subtasks-toggle-btn');
-            if (container.style.display === 'none') {
-                container.style.display = 'block';
+            // Get the grid/list element to toggle (different selectors for practice)
+            const gridId = (kpiId === 'practice') ? `${kpiId}-subtasks-list` : `${kpiId}-subtasks-grid`;
+            const grid = document.getElementById(gridId);
+
+            // Get the button from the header (which stays visible)
+            const header = document.querySelector(`#${kpiId}-subtasks .subtasks-header`);
+            const btn = header.querySelector('.subtasks-toggle-btn');
+
+            if (grid.style.display === 'none') {
+                grid.style.display = 'block';
                 btn.classList.remove('collapsed');
             } else {
-                container.style.display = 'none';
+                grid.style.display = 'none';
                 btn.classList.add('collapsed');
             }
         }

@@ -866,6 +866,8 @@
                     practice: '過去問'
                 }[task.kpiId] || 'その他';
 
+                const escapedQueueId = task.queueId.replace(/'/g, "\\'");
+
                 return `
                     <label class="task-queue-item">
                         <div class="task-queue-item-info">
@@ -874,7 +876,7 @@
                         </div>
                         <input type="checkbox"
                                class="task-queue-item-checkbox"
-                               onchange="completeQueueTask('${task.queueId}')">
+                               onchange="completeQueueTask('${escapedQueueId}')">
                     </label>
                 `;
             }).join('');
@@ -962,6 +964,7 @@
 
             container.innerHTML = subtasks.map(subtask => {
                 const inQueue = isTaskInQueue('vocab', subtask.id);
+                const escapedName = subtask.name.replace(/'/g, "\\'");
                 return `
                     <div class="subtask-item-wrapper">
                         <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
@@ -972,7 +975,7 @@
                             <span class="subtask-label-text">${subtask.name}</span>
                         </label>
                         <button class="add-to-queue-btn ${inQueue ? 'in-queue' : ''}"
-                                onclick="addTaskToQueue('vocab', ${subtask.id}, '${subtask.name}')"
+                                onclick="addTaskToQueue('vocab', ${subtask.id}, '${escapedName}')"
                                 ${inQueue ? 'disabled title="実行中"' : 'title="キューに追加"'}
                                 type="button">
                             ${inQueue ? '⏳' : '➕'}
@@ -990,6 +993,7 @@
 
             container.innerHTML = subtasks.map(subtask => {
                 const inQueue = isTaskInQueue('grammar', subtask.id);
+                const escapedName = subtask.name.replace(/'/g, "\\'");
                 return `
                     <div class="subtask-item-wrapper">
                         <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
@@ -1000,7 +1004,7 @@
                             <span class="subtask-label-text">${subtask.name}</span>
                         </label>
                         <button class="add-to-queue-btn ${inQueue ? 'in-queue' : ''}"
-                                onclick="addTaskToQueue('grammar', ${subtask.id}, '${subtask.name}')"
+                                onclick="addTaskToQueue('grammar', ${subtask.id}, '${escapedName}')"
                                 ${inQueue ? 'disabled title="実行中"' : 'title="キューに追加"'}
                                 type="button">
                             ${inQueue ? '⏳' : '➕'}
@@ -1018,6 +1022,7 @@
 
             container.innerHTML = subtasks.map(subtask => {
                 const inQueue = isTaskInQueue('practice', subtask.id);
+                const escapedName = subtask.name.replace(/'/g, "\\'");
                 return `
                     <div class="subtask-list-item-wrapper">
                         <label class="subtask-list-item ${subtask.completed ? 'completed' : ''}">
@@ -1028,7 +1033,7 @@
                             <span class="subtask-list-label">${subtask.name}</span>
                         </label>
                         <button class="add-to-queue-btn ${inQueue ? 'in-queue' : ''}"
-                                onclick="addTaskToQueue('practice', ${subtask.id}, '${subtask.name}')"
+                                onclick="addTaskToQueue('practice', ${subtask.id}, '${escapedName}')"
                                 ${inQueue ? 'disabled title="実行中"' : 'title="キューに追加"'}
                                 type="button">
                             ${inQueue ? '⏳' : '➕'}

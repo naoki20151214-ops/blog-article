@@ -154,6 +154,53 @@
             font-weight: bold;
             color: #333;
         }
+        .kpi-title-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .kpi-importance {
+            font-size: 13px;
+            color: #999;
+            font-weight: normal;
+            background: #f0f0f0;
+            padding: 3px 8px;
+            border-radius: 4px;
+            min-width: 45px;
+            text-align: center;
+        }
+        .kpi-importance.editing {
+            display: none;
+        }
+        .importance-edit-input {
+            width: 50px;
+            padding: 4px 8px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            font-size: 13px;
+            font-weight: bold;
+            text-align: center;
+            display: none;
+        }
+        .importance-edit-input.visible {
+            display: inline-block;
+        }
+        .importance-edit-input:focus {
+            outline: none;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+        }
+        .importance-edit-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 13px;
+            padding: 2px 6px;
+            opacity: 0.5;
+            transition: opacity 0.2s;
+        }
+        .importance-edit-btn:hover {
+            opacity: 1;
+        }
         .reset-btn {
             width: 100%;
             padding: 12px;
@@ -205,7 +252,12 @@
                 <!-- KPI 1: 英単語 -->
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <span class="kpi-name">📚 英単語</span>
+                        <div class="kpi-title-section">
+                            <span class="kpi-name">📚 英単語</span>
+                            <span class="kpi-importance" id="vocab-importance">33%</span>
+                            <input type="text" class="importance-edit-input" id="vocab-importance-input" />
+                        </div>
+                        <button class="importance-edit-btn" onclick="toggleImportanceEdit('vocab')">✏️</button>
                     </div>
                     <div class="progress-info">
                         <span id="vocab-progress">45</span> / 100個
@@ -225,7 +277,12 @@
                 <!-- KPI 2: 英文法 -->
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <span class="kpi-name">📖 英文法</span>
+                        <div class="kpi-title-section">
+                            <span class="kpi-name">📖 英文法</span>
+                            <span class="kpi-importance" id="grammar-importance">33%</span>
+                            <input type="text" class="importance-edit-input" id="grammar-importance-input" />
+                        </div>
+                        <button class="importance-edit-btn" onclick="toggleImportanceEdit('grammar')">✏️</button>
                     </div>
                     <div class="progress-info">
                         <span id="grammar-progress">28</span> / 50ページ
@@ -245,7 +302,12 @@
                 <!-- KPI 3: 過去問 -->
                 <div class="kpi-card">
                     <div class="kpi-header">
-                        <span class="kpi-name">✏️ 過去問</span>
+                        <div class="kpi-title-section">
+                            <span class="kpi-name">✏️ 過去問</span>
+                            <span class="kpi-importance" id="practice-importance">34%</span>
+                            <input type="text" class="importance-edit-input" id="practice-importance-input" />
+                        </div>
+                        <button class="importance-edit-btn" onclick="toggleImportanceEdit('practice')">✏️</button>
                     </div>
                     <div class="progress-info">
                         <span id="practice-progress">1</span> / 3回
@@ -269,15 +331,15 @@
 
     <script>
         const kpiConfig = {
-            vocab: { target: 100, storageKey: 'kgi_vocab' },
-            grammar: { target: 50, storageKey: 'kgi_grammar' },
-            practice: { target: 3, storageKey: 'kgi_practice' }
+            vocab: { target: 100, storageKey: 'kgi_vocab', importanceKey: 'kgi_importance_vocab' },
+            grammar: { target: 50, storageKey: 'kgi_grammar', importanceKey: 'kgi_importance_grammar' },
+            practice: { target: 3, storageKey: 'kgi_practice', importanceKey: 'kgi_importance_practice' }
         };
 
-        const kpiWeights = {
-            vocab: 33.33,
-            grammar: 33.33,
-            practice: 33.34
+        const defaultImportance = {
+            vocab: 33,
+            grammar: 33,
+            practice: 34
         };
 
         const initialValues = {
@@ -286,14 +348,25 @@
             practice: 1
         };
 
+        function getImportancePercentages() {
+            const importances = {};
+            Object.keys(kpiConfig).forEach(kpiId => {
+                const importanceKey = kpiConfig[kpiId].importanceKey;
+                const stored = localStorage.getItem(importanceKey);
+                importances[kpiId] = stored !== null ? parseInt(stored) : defaultImportance[kpiId];
+            });
+            return importances;
+        }
+
         function calculateKgiProgress() {
+            const importances = getImportancePercentages();
             let totalProgress = 0;
             Object.keys(kpiConfig).forEach(kpiId => {
                 const storageKey = kpiConfig[kpiId].storageKey;
                 const target = kpiConfig[kpiId].target;
                 const current = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
                 const progress = (current / target) * 100;
-                const weight = kpiWeights[kpiId] / 100;
+                const weight = importances[kpiId] / 100;
                 totalProgress += progress * weight;
             });
             return Math.round(totalProgress);
@@ -305,12 +378,29 @@
             document.getElementById('kgi-percentage').textContent = kgiProgress + '%';
         }
 
+        function loadImportances() {
+            const allImportancesExist = Object.keys(kpiConfig).every(kpiId =>
+                localStorage.getItem(kpiConfig[kpiId].importanceKey) !== null
+            );
+
+            if (!allImportancesExist) {
+                Object.keys(kpiConfig).forEach(kpiId => {
+                    const importanceKey = kpiConfig[kpiId].importanceKey;
+                    if (localStorage.getItem(importanceKey) === null) {
+                        localStorage.setItem(importanceKey, defaultImportance[kpiId]);
+                    }
+                });
+            }
+        }
+
         function loadKPIs() {
+            loadImportances();
             Object.keys(kpiConfig).forEach(kpiId => {
                 const storageKey = kpiConfig[kpiId].storageKey;
                 const stored = localStorage.getItem(storageKey);
                 const value = stored !== null ? parseInt(stored) : initialValues[kpiId];
                 updateDisplay(kpiId, value);
+                updateImportanceDisplay(kpiId);
             });
             updateKgiProgress();
         }
@@ -339,12 +429,127 @@
             document.getElementById(`${kpiId}-percentage`).textContent = percentage + '%';
         }
 
+        function validateAndAdjustImportances(changedKpi, newValue) {
+            const newVal = parseInt(newValue);
+            if (isNaN(newVal) || newVal < 1 || newVal > 99) {
+                return null;
+            }
+
+            const currentImportances = getImportancePercentages();
+            const otherKpis = Object.keys(kpiConfig).filter(id => id !== changedKpi);
+            const otherTotal = 100 - newVal;
+
+            const currentOtherTotal = otherKpis.reduce((sum, id) => sum + currentImportances[id], 0);
+
+            const adjustedImportances = { [changedKpi]: newVal };
+
+            if (currentOtherTotal > 0) {
+                const scaleFactor = otherTotal / currentOtherTotal;
+                otherKpis.forEach(kpiId => {
+                    adjustedImportances[kpiId] = Math.round(currentImportances[kpiId] * scaleFactor);
+                });
+            } else {
+                const perKpi = Math.floor(otherTotal / otherKpis.length);
+                const remainder = otherTotal % otherKpis.length;
+                otherKpis.forEach((kpiId, index) => {
+                    adjustedImportances[kpiId] = perKpi + (index < remainder ? 1 : 0);
+                });
+            }
+
+            let sum = Object.values(adjustedImportances).reduce((a, b) => a + b, 0);
+            if (sum !== 100) {
+                const largestKpiId = otherKpis.reduce((maxId, id) =>
+                    adjustedImportances[id] > adjustedImportances[maxId] ? id : maxId
+                );
+                adjustedImportances[largestKpiId] += (100 - sum);
+            }
+
+            return adjustedImportances;
+        }
+
+        function saveImportancePercentage(kpiId, newValue) {
+            const adjusted = validateAndAdjustImportances(kpiId, newValue);
+
+            if (adjusted === null) {
+                alert('重要度は1%以上99%以下の整数で入力してください。');
+                document.getElementById(`${kpiId}-importance-input`).classList.remove('visible');
+                document.getElementById(`${kpiId}-importance`).classList.remove('editing');
+                return;
+            }
+
+            Object.keys(adjusted).forEach(adjustedKpiId => {
+                const importanceKey = kpiConfig[adjustedKpiId].importanceKey;
+                localStorage.setItem(importanceKey, adjusted[adjustedKpiId]);
+                updateImportanceDisplay(adjustedKpiId);
+            });
+
+            document.getElementById(`${kpiId}-importance-input`).classList.remove('visible');
+            document.getElementById(`${kpiId}-importance`).classList.remove('editing');
+
+            const inputElements = document.querySelectorAll('.importance-edit-input');
+            inputElements.forEach(input => {
+                input.removeEventListener('keydown', arguments.callee);
+                input.removeEventListener('blur', arguments.callee);
+            });
+
+            updateKgiProgress();
+        }
+
+        function updateImportanceDisplay(kpiId) {
+            const importances = getImportancePercentages();
+            const importance = importances[kpiId];
+            document.getElementById(`${kpiId}-importance`).textContent = importance + '%';
+        }
+
+        function toggleImportanceEdit(kpiId) {
+            const importanceSpan = document.getElementById(`${kpiId}-importance`);
+            const importanceInput = document.getElementById(`${kpiId}-importance-input`);
+
+            if (importanceInput.classList.contains('visible')) {
+                importanceInput.classList.remove('visible');
+                importanceSpan.classList.remove('editing');
+            } else {
+                const currentValue = getImportancePercentages()[kpiId];
+                importanceInput.value = currentValue;
+                importanceInput.classList.add('visible');
+                importanceSpan.classList.add('editing');
+                importanceInput.focus();
+                importanceInput.select();
+
+                const saveImportance = () => {
+                    saveImportancePercentage(kpiId, importanceInput.value);
+                };
+
+                const handleKeyDown = (e) => {
+                    if (e.key === 'Enter') {
+                        saveImportance();
+                    } else if (e.key === 'Escape') {
+                        importanceInput.classList.remove('visible');
+                        importanceSpan.classList.remove('editing');
+                        importanceInput.removeEventListener('keydown', handleKeyDown);
+                        importanceInput.removeEventListener('blur', handleBlur);
+                    }
+                };
+
+                const handleBlur = () => {
+                    saveImportance();
+                };
+
+                importanceInput.addEventListener('keydown', handleKeyDown);
+                importanceInput.addEventListener('blur', handleBlur);
+            }
+        }
+
         function resetKPIs() {
-            if (confirm('進捗をリセットしてもよろしいですか？')) {
+            if (confirm('進捗とタスク重要度をリセットしてもよろしいですか？')) {
                 Object.keys(kpiConfig).forEach(kpiId => {
                     const storageKey = kpiConfig[kpiId].storageKey;
+                    const importanceKey = kpiConfig[kpiId].importanceKey;
                     localStorage.removeItem(storageKey);
+                    localStorage.removeItem(importanceKey);
+                    localStorage.setItem(importanceKey, defaultImportance[kpiId]);
                     updateDisplay(kpiId, initialValues[kpiId]);
+                    updateImportanceDisplay(kpiId);
                 });
                 updateKgiProgress();
             }

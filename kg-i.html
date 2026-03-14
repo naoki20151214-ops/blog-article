@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KG I</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .navbar {
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 15px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        .navbar-content {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        .navbar a:hover {
+            color: #667eea;
+        }
+        .navbar a.home {
+            font-weight: bold;
+            font-size: 18px;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        .kgi-container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-top: 0;
+            text-align: center;
+            font-size: 32px;
+        }
+        .goal-section {
+            text-align: center;
+            margin-bottom: 40px;
+            padding: 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            color: white;
+        }
+        .goal-title {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+        }
+        .kpis-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-top: 30px;
+        }
+        .kpi-card {
+            background: #f9f9f9;
+            padding: 25px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .kpi-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .kpi-icon {
+            font-size: 24px;
+        }
+        .progress-info {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+            color: #666;
+        }
+        .progress-bar-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 25px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+        .progress-bar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            height: 100%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .kpi-controls {
+            display: flex;
+            justify-content: space-around;
+            gap: 10px;
+            align-items: center;
+        }
+        .control-btn {
+            width: 40px;
+            height: 40px;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 2px 5px rgba(102, 126, 234, 0.3);
+        }
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(102, 126, 234, 0.5);
+        }
+        .control-btn:active {
+            transform: translateY(0);
+        }
+        .current-value {
+            min-width: 60px;
+            text-align: center;
+            font-weight: bold;
+            color: #333;
+        }
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            margin-top: 30px;
+            background: #999;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .reset-btn:hover {
+            background: #777;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-content">
+            <a href="index.html" class="home">ホーム</a>
+            <div>
+                <a href="about.html">自己紹介</a>
+                <a href="products.html">商品紹介</a>
+                <a href="search-app.html">学生検索</a>
+                <a href="todo-list.html">To Doリスト</a>
+                <a href="kg-i.html">KG I</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="kgi-container">
+            <h1>KG I試験対策</h1>
+
+            <div class="goal-section">
+                <p class="goal-title">🎯 来週のテストで100点を取る</p>
+            </div>
+
+            <div class="kpis-grid">
+                <!-- KPI 1: 英単語 -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-name">📚 英単語</span>
+                    </div>
+                    <div class="progress-info">
+                        <span id="vocab-progress">45</span> / 100個
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="vocab-bar" style="width: 45%;">
+                            <span id="vocab-percentage">45%</span>
+                        </div>
+                    </div>
+                    <div class="kpi-controls">
+                        <button class="control-btn" onclick="updateKPI('vocab', -1)">−</button>
+                        <div class="current-value" id="vocab-display">45</div>
+                        <button class="control-btn" onclick="updateKPI('vocab', 1)">＋</button>
+                    </div>
+                </div>
+
+                <!-- KPI 2: 英文法 -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-name">📖 英文法</span>
+                    </div>
+                    <div class="progress-info">
+                        <span id="grammar-progress">28</span> / 50ページ
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="grammar-bar" style="width: 56%;">
+                            <span id="grammar-percentage">56%</span>
+                        </div>
+                    </div>
+                    <div class="kpi-controls">
+                        <button class="control-btn" onclick="updateKPI('grammar', -1)">−</button>
+                        <div class="current-value" id="grammar-display">28</div>
+                        <button class="control-btn" onclick="updateKPI('grammar', 1)">＋</button>
+                    </div>
+                </div>
+
+                <!-- KPI 3: 過去問 -->
+                <div class="kpi-card">
+                    <div class="kpi-header">
+                        <span class="kpi-name">✏️ 過去問</span>
+                    </div>
+                    <div class="progress-info">
+                        <span id="practice-progress">1</span> / 3回
+                    </div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar" id="practice-bar" style="width: 33.33%;">
+                            <span id="practice-percentage">33%</span>
+                        </div>
+                    </div>
+                    <div class="kpi-controls">
+                        <button class="control-btn" onclick="updateKPI('practice', -1)">−</button>
+                        <div class="current-value" id="practice-display">1</div>
+                        <button class="control-btn" onclick="updateKPI('practice', 1)">＋</button>
+                    </div>
+                </div>
+            </div>
+
+            <button class="reset-btn" onclick="resetKPIs()">進捗をリセット</button>
+        </div>
+    </div>
+
+    <script>
+        const kpiConfig = {
+            vocab: { target: 100, storageKey: 'kgi_vocab' },
+            grammar: { target: 50, storageKey: 'kgi_grammar' },
+            practice: { target: 3, storageKey: 'kgi_practice' }
+        };
+
+        const initialValues = {
+            vocab: 45,
+            grammar: 28,
+            practice: 1
+        };
+
+        function loadKPIs() {
+            Object.keys(kpiConfig).forEach(kpiId => {
+                const storageKey = kpiConfig[kpiId].storageKey;
+                const stored = localStorage.getItem(storageKey);
+                const value = stored !== null ? parseInt(stored) : initialValues[kpiId];
+                updateDisplay(kpiId, value);
+            });
+        }
+
+        function updateKPI(kpiId, delta) {
+            const config = kpiConfig[kpiId];
+            const storageKey = config.storageKey;
+            const target = config.target;
+
+            let current = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
+            current = Math.max(0, Math.min(target, current + delta));
+
+            localStorage.setItem(storageKey, current);
+            updateDisplay(kpiId, current);
+        }
+
+        function updateDisplay(kpiId, value) {
+            const config = kpiConfig[kpiId];
+            const target = config.target;
+            const percentage = Math.round((value / target) * 100);
+
+            document.getElementById(`${kpiId}-display`).textContent = value;
+            document.getElementById(`${kpiId}-progress`).textContent = value;
+            document.getElementById(`${kpiId}-bar`).style.width = percentage + '%';
+            document.getElementById(`${kpiId}-percentage`).textContent = percentage + '%';
+        }
+
+        function resetKPIs() {
+            if (confirm('進捗をリセットしてもよろしいですか？')) {
+                Object.keys(kpiConfig).forEach(kpiId => {
+                    const storageKey = kpiConfig[kpiId].storageKey;
+                    localStorage.removeItem(storageKey);
+                    updateDisplay(kpiId, initialValues[kpiId]);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadKPIs);
+    </script>
+</body>
+</html>

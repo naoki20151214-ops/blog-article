@@ -160,34 +160,48 @@
             gap: 12px;
         }
         .kpi-importance {
-            font-size: 13px;
-            color: #999;
-            font-weight: normal;
-            background: #f0f0f0;
-            padding: 3px 8px;
+            font-size: 14px;
+            color: white;
+            font-weight: bold;
+            background: #667eea;
+            padding: 4px 10px;
             border-radius: 4px;
-            min-width: 45px;
+            min-width: 35px;
             text-align: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .kpi-importance:hover {
+            background: #764ba2;
         }
         .kpi-importance.editing {
             display: none;
         }
-        .importance-edit-input {
-            width: 50px;
-            padding: 4px 8px;
+        .importance-selector {
+            display: none;
+            flex-gap: 8px;
+            gap: 8px;
+        }
+        .importance-selector.visible {
+            display: flex;
+        }
+        .abc-option {
+            padding: 6px 12px;
             border: 2px solid #667eea;
             border-radius: 4px;
-            font-size: 13px;
+            background: white;
+            color: #667eea;
+            cursor: pointer;
             font-weight: bold;
-            text-align: center;
-            display: none;
+            transition: all 0.2s;
         }
-        .importance-edit-input.visible {
-            display: inline-block;
+        .abc-option:hover {
+            background: #667eea;
+            color: white;
         }
-        .importance-edit-input:focus {
-            outline: none;
-            box-shadow: 0 0 5px rgba(102, 126, 234, 0.5);
+        .abc-option.selected {
+            background: #667eea;
+            color: white;
         }
         .importance-edit-btn {
             background: none;
@@ -254,8 +268,12 @@
                     <div class="kpi-header">
                         <div class="kpi-title-section">
                             <span class="kpi-name">📚 英単語</span>
-                            <span class="kpi-importance" id="vocab-importance">33%</span>
-                            <input type="text" class="importance-edit-input" id="vocab-importance-input" />
+                            <span class="kpi-importance" id="vocab-importance" onclick="toggleImportanceEdit('vocab')">B</span>
+                            <div class="importance-selector" id="vocab-importance-selector">
+                                <button class="abc-option" onclick="saveImportanceLevel('vocab', 'A')">A</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('vocab', 'B')">B</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('vocab', 'C')">C</button>
+                            </div>
                         </div>
                         <button class="importance-edit-btn" onclick="toggleImportanceEdit('vocab')">✏️</button>
                     </div>
@@ -279,8 +297,12 @@
                     <div class="kpi-header">
                         <div class="kpi-title-section">
                             <span class="kpi-name">📖 英文法</span>
-                            <span class="kpi-importance" id="grammar-importance">33%</span>
-                            <input type="text" class="importance-edit-input" id="grammar-importance-input" />
+                            <span class="kpi-importance" id="grammar-importance" onclick="toggleImportanceEdit('grammar')">B</span>
+                            <div class="importance-selector" id="grammar-importance-selector">
+                                <button class="abc-option" onclick="saveImportanceLevel('grammar', 'A')">A</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('grammar', 'B')">B</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('grammar', 'C')">C</button>
+                            </div>
                         </div>
                         <button class="importance-edit-btn" onclick="toggleImportanceEdit('grammar')">✏️</button>
                     </div>
@@ -304,8 +326,12 @@
                     <div class="kpi-header">
                         <div class="kpi-title-section">
                             <span class="kpi-name">✏️ 過去問</span>
-                            <span class="kpi-importance" id="practice-importance">34%</span>
-                            <input type="text" class="importance-edit-input" id="practice-importance-input" />
+                            <span class="kpi-importance" id="practice-importance" onclick="toggleImportanceEdit('practice')">B</span>
+                            <div class="importance-selector" id="practice-importance-selector">
+                                <button class="abc-option" onclick="saveImportanceLevel('practice', 'A')">A</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('practice', 'B')">B</button>
+                                <button class="abc-option" onclick="saveImportanceLevel('practice', 'C')">C</button>
+                            </div>
                         </div>
                         <button class="importance-edit-btn" onclick="toggleImportanceEdit('practice')">✏️</button>
                     </div>
@@ -337,9 +363,9 @@
         };
 
         const defaultImportance = {
-            vocab: 33,
-            grammar: 33,
-            practice: 34
+            vocab: 'B',
+            grammar: 'B',
+            practice: 'B'
         };
 
         const initialValues = {
@@ -348,25 +374,45 @@
             practice: 1
         };
 
-        function getImportancePercentages() {
+        function getImportanceLevels() {
             const importances = {};
             Object.keys(kpiConfig).forEach(kpiId => {
                 const importanceKey = kpiConfig[kpiId].importanceKey;
                 const stored = localStorage.getItem(importanceKey);
-                importances[kpiId] = stored !== null ? parseInt(stored) : defaultImportance[kpiId];
+                importances[kpiId] = stored !== null ? stored : defaultImportance[kpiId];
             });
             return importances;
         }
 
+        function convertABCToWeights() {
+            const levels = getImportanceLevels();
+            const weights = { A: 3, B: 2, C: 1 };
+
+            let totalWeight = 0;
+            const levelWeights = {};
+
+            Object.keys(kpiConfig).forEach(kpiId => {
+                levelWeights[kpiId] = weights[levels[kpiId]] || 2;
+                totalWeight += levelWeights[kpiId];
+            });
+
+            const percentages = {};
+            Object.keys(kpiConfig).forEach(kpiId => {
+                percentages[kpiId] = (levelWeights[kpiId] / totalWeight) * 100;
+            });
+
+            return percentages;
+        }
+
         function calculateKgiProgress() {
-            const importances = getImportancePercentages();
+            const importancePercentages = convertABCToWeights();
             let totalProgress = 0;
             Object.keys(kpiConfig).forEach(kpiId => {
                 const storageKey = kpiConfig[kpiId].storageKey;
                 const target = kpiConfig[kpiId].target;
                 const current = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
                 const progress = (current / target) * 100;
-                const weight = importances[kpiId] / 100;
+                const weight = importancePercentages[kpiId] / 100;
                 totalProgress += progress * weight;
             });
             return Math.round(totalProgress);
@@ -379,18 +425,12 @@
         }
 
         function loadImportances() {
-            const allImportancesExist = Object.keys(kpiConfig).every(kpiId =>
-                localStorage.getItem(kpiConfig[kpiId].importanceKey) !== null
-            );
-
-            if (!allImportancesExist) {
-                Object.keys(kpiConfig).forEach(kpiId => {
-                    const importanceKey = kpiConfig[kpiId].importanceKey;
-                    if (localStorage.getItem(importanceKey) === null) {
-                        localStorage.setItem(importanceKey, defaultImportance[kpiId]);
-                    }
-                });
-            }
+            Object.keys(kpiConfig).forEach(kpiId => {
+                const importanceKey = kpiConfig[kpiId].importanceKey;
+                if (localStorage.getItem(importanceKey) === null) {
+                    localStorage.setItem(importanceKey, defaultImportance[kpiId]);
+                }
+            });
         }
 
         function loadKPIs() {
@@ -429,114 +469,38 @@
             document.getElementById(`${kpiId}-percentage`).textContent = percentage + '%';
         }
 
-        function validateAndAdjustImportances(changedKpi, newValue) {
-            const newVal = parseInt(newValue);
-            if (isNaN(newVal) || newVal < 1 || newVal > 99) {
-                return null;
-            }
-
-            const currentImportances = getImportancePercentages();
-            const otherKpis = Object.keys(kpiConfig).filter(id => id !== changedKpi);
-            const otherTotal = 100 - newVal;
-
-            const currentOtherTotal = otherKpis.reduce((sum, id) => sum + currentImportances[id], 0);
-
-            const adjustedImportances = { [changedKpi]: newVal };
-
-            if (currentOtherTotal > 0) {
-                const scaleFactor = otherTotal / currentOtherTotal;
-                otherKpis.forEach(kpiId => {
-                    adjustedImportances[kpiId] = Math.round(currentImportances[kpiId] * scaleFactor);
-                });
-            } else {
-                const perKpi = Math.floor(otherTotal / otherKpis.length);
-                const remainder = otherTotal % otherKpis.length;
-                otherKpis.forEach((kpiId, index) => {
-                    adjustedImportances[kpiId] = perKpi + (index < remainder ? 1 : 0);
-                });
-            }
-
-            let sum = Object.values(adjustedImportances).reduce((a, b) => a + b, 0);
-            if (sum !== 100) {
-                const largestKpiId = otherKpis.reduce((maxId, id) =>
-                    adjustedImportances[id] > adjustedImportances[maxId] ? id : maxId
-                );
-                adjustedImportances[largestKpiId] += (100 - sum);
-            }
-
-            return adjustedImportances;
-        }
-
-        function saveImportancePercentage(kpiId, newValue) {
-            const adjusted = validateAndAdjustImportances(kpiId, newValue);
-
-            if (adjusted === null) {
-                alert('重要度は1%以上99%以下の整数で入力してください。');
-                document.getElementById(`${kpiId}-importance-input`).classList.remove('visible');
-                document.getElementById(`${kpiId}-importance`).classList.remove('editing');
-                return;
-            }
-
-            Object.keys(adjusted).forEach(adjustedKpiId => {
-                const importanceKey = kpiConfig[adjustedKpiId].importanceKey;
-                localStorage.setItem(importanceKey, adjusted[adjustedKpiId]);
-                updateImportanceDisplay(adjustedKpiId);
-            });
-
-            document.getElementById(`${kpiId}-importance-input`).classList.remove('visible');
-            document.getElementById(`${kpiId}-importance`).classList.remove('editing');
-
-            const inputElements = document.querySelectorAll('.importance-edit-input');
-            inputElements.forEach(input => {
-                input.removeEventListener('keydown', arguments.callee);
-                input.removeEventListener('blur', arguments.callee);
-            });
-
+        function saveImportanceLevel(kpiId, level) {
+            const importanceKey = kpiConfig[kpiId].importanceKey;
+            localStorage.setItem(importanceKey, level);
+            updateImportanceDisplay(kpiId);
+            toggleImportanceEdit(kpiId);
             updateKgiProgress();
         }
 
         function updateImportanceDisplay(kpiId) {
-            const importances = getImportancePercentages();
+            const importances = getImportanceLevels();
             const importance = importances[kpiId];
-            document.getElementById(`${kpiId}-importance`).textContent = importance + '%';
+            document.getElementById(`${kpiId}-importance`).textContent = importance;
         }
 
         function toggleImportanceEdit(kpiId) {
             const importanceSpan = document.getElementById(`${kpiId}-importance`);
-            const importanceInput = document.getElementById(`${kpiId}-importance-input`);
+            const importanceSelector = document.getElementById(`${kpiId}-importance-selector`);
 
-            if (importanceInput.classList.contains('visible')) {
-                importanceInput.classList.remove('visible');
+            if (importanceSelector.classList.contains('visible')) {
+                importanceSelector.classList.remove('visible');
                 importanceSpan.classList.remove('editing');
             } else {
-                const currentValue = getImportancePercentages()[kpiId];
-                importanceInput.value = currentValue;
-                importanceInput.classList.add('visible');
-                importanceSpan.classList.add('editing');
-                importanceInput.focus();
-                importanceInput.select();
-
-                const saveImportance = () => {
-                    saveImportancePercentage(kpiId, importanceInput.value);
-                };
-
-                const handleKeyDown = (e) => {
-                    if (e.key === 'Enter') {
-                        saveImportance();
-                    } else if (e.key === 'Escape') {
-                        importanceInput.classList.remove('visible');
-                        importanceSpan.classList.remove('editing');
-                        importanceInput.removeEventListener('keydown', handleKeyDown);
-                        importanceInput.removeEventListener('blur', handleBlur);
+                const currentLevel = getImportanceLevels()[kpiId];
+                const options = importanceSelector.querySelectorAll('.abc-option');
+                options.forEach(option => {
+                    option.classList.remove('selected');
+                    if (option.textContent === currentLevel) {
+                        option.classList.add('selected');
                     }
-                };
-
-                const handleBlur = () => {
-                    saveImportance();
-                };
-
-                importanceInput.addEventListener('keydown', handleKeyDown);
-                importanceInput.addEventListener('blur', handleBlur);
+                });
+                importanceSelector.classList.add('visible');
+                importanceSpan.classList.add('editing');
             }
         }
 

@@ -230,6 +230,154 @@
         .reset-btn:hover {
             background: #777;
         }
+        /* Subtasks Container */
+        .subtasks-container {
+            margin: 15px 0;
+            padding: 12px;
+            background: #f0f0f0;
+            border-radius: 6px;
+            border-left: 3px solid #667eea;
+        }
+        .subtasks-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .subtasks-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: #667eea;
+            text-transform: uppercase;
+        }
+        .subtasks-toggle-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #667eea;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+        .subtasks-toggle-btn.collapsed {
+            transform: rotate(-90deg);
+        }
+        /* Grid for vocabulary and grammar checkboxes */
+        .subtasks-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 8px;
+        }
+        /* Individual Subtask Checkbox Item (Grid style) */
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 10px;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #ddd;
+        }
+        .subtask-item:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+        }
+        .subtask-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid #667eea;
+            border-radius: 3px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .subtask-checkbox:checked {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #764ba2;
+        }
+        .subtask-checkbox:checked::after {
+            content: '✓';
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .subtask-label-text {
+            font-size: 13px;
+            color: #333;
+            flex-grow: 1;
+        }
+        .subtask-item.completed .subtask-label-text {
+            color: #999;
+            text-decoration: line-through;
+        }
+        /* List style for practice tasks */
+        .subtasks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .subtask-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #ddd;
+        }
+        .subtask-list-item:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
+            transform: translateX(2px);
+        }
+        .subtask-list-item.completed {
+            background: #f0f7ff;
+            border-color: #667eea;
+        }
+        .subtask-list-checkbox {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #667eea;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: white;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .subtask-list-checkbox:checked {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-color: #764ba2;
+        }
+        .subtask-list-checkbox:checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .subtask-list-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #333;
+            flex-grow: 1;
+        }
+        .subtask-list-item.completed .subtask-list-label {
+            color: #667eea;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -285,6 +433,15 @@
                             <span id="vocab-percentage">45%</span>
                         </div>
                     </div>
+                    <div class="subtasks-container" id="vocab-subtasks">
+                        <div class="subtasks-header">
+                            <span class="subtasks-label">サブタスク</span>
+                            <button class="subtasks-toggle-btn" onclick="toggleSubtasksView('vocab')">▼</button>
+                        </div>
+                        <div class="subtasks-grid" id="vocab-subtasks-grid">
+                            <!-- Rendered by JavaScript -->
+                        </div>
+                    </div>
                     <div class="kpi-controls">
                         <button class="control-btn" onclick="updateKPI('vocab', -1)">−</button>
                         <div class="current-value" id="vocab-display">45</div>
@@ -314,6 +471,15 @@
                             <span id="grammar-percentage">56%</span>
                         </div>
                     </div>
+                    <div class="subtasks-container" id="grammar-subtasks">
+                        <div class="subtasks-header">
+                            <span class="subtasks-label">サブタスク</span>
+                            <button class="subtasks-toggle-btn" onclick="toggleSubtasksView('grammar')">▼</button>
+                        </div>
+                        <div class="subtasks-grid" id="grammar-subtasks-grid">
+                            <!-- Rendered by JavaScript -->
+                        </div>
+                    </div>
                     <div class="kpi-controls">
                         <button class="control-btn" onclick="updateKPI('grammar', -1)">−</button>
                         <div class="current-value" id="grammar-display">28</div>
@@ -341,6 +507,15 @@
                     <div class="progress-bar-container">
                         <div class="progress-bar" id="practice-bar" style="width: 33.33%;">
                             <span id="practice-percentage">33%</span>
+                        </div>
+                    </div>
+                    <div class="subtasks-container" id="practice-subtasks">
+                        <div class="subtasks-header">
+                            <span class="subtasks-label">サブタスク</span>
+                            <button class="subtasks-toggle-btn" onclick="toggleSubtasksView('practice')">▼</button>
+                        </div>
+                        <div class="subtasks-list" id="practice-subtasks-list">
+                            <!-- Rendered by JavaScript -->
                         </div>
                     </div>
                     <div class="kpi-controls">
@@ -373,6 +548,189 @@
             grammar: 28,
             practice: 1
         };
+
+        // ===== SUBTASK SYSTEM FUNCTIONS =====
+
+        // Initialize subtasks on page load
+        function initializeSubtasks() {
+            initVocabSubtasks();
+            initGrammarSubtasks();
+            initPracticeSubtasks();
+        }
+
+        function initVocabSubtasks() {
+            const storageKey = 'kgi_vocab_subtasks';
+            if (!localStorage.getItem(storageKey)) {
+                const subtasks = Array.from({ length: 10 }, (_, i) => ({
+                    id: i,
+                    completed: false,
+                    name: `単語 ${i * 10 + 1}-${(i + 1) * 10}`
+                }));
+                localStorage.setItem(storageKey, JSON.stringify(subtasks));
+            }
+            renderVocabSubtasks();
+        }
+
+        function initGrammarSubtasks() {
+            const storageKey = 'kgi_grammar_subtasks';
+            if (!localStorage.getItem(storageKey)) {
+                const subtasks = Array.from({ length: 5 }, (_, i) => ({
+                    id: i,
+                    completed: false,
+                    name: `文法 ${i * 10 + 1}-${(i + 1) * 10}ページ`
+                }));
+                localStorage.setItem(storageKey, JSON.stringify(subtasks));
+            }
+            renderGrammarSubtasks();
+        }
+
+        function initPracticeSubtasks() {
+            const storageKey = 'kgi_practice_subtasks';
+            if (!localStorage.getItem(storageKey)) {
+                const subtasks = [
+                    { id: 0, completed: false, name: '過去問を1回満点にする' },
+                    { id: 1, completed: false, name: '過去問を2回満点にする' },
+                    { id: 2, completed: false, name: '過去問を3回満点にする' }
+                ];
+                localStorage.setItem(storageKey, JSON.stringify(subtasks));
+            }
+            renderPracticeSubtasks();
+        }
+
+        // Get subtasks from localStorage
+        function getSubtasks(kpiId) {
+            const storageKey = `kgi_${kpiId}_subtasks`;
+            const stored = localStorage.getItem(storageKey);
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        // Save subtasks to localStorage
+        function saveSubtasks(kpiId, subtasks) {
+            const storageKey = `kgi_${kpiId}_subtasks`;
+            localStorage.setItem(storageKey, JSON.stringify(subtasks));
+        }
+
+        // Render vocabulary subtasks
+        function renderVocabSubtasks() {
+            const subtasks = getSubtasks('vocab');
+            const container = document.getElementById('vocab-subtasks-grid');
+            if (!container) return;
+
+            container.innerHTML = subtasks.map(subtask => `
+                <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
+                    <input type="checkbox"
+                           class="subtask-checkbox"
+                           ${subtask.completed ? 'checked' : ''}
+                           onchange="toggleSubtask('vocab', ${subtask.id})">
+                    <span class="subtask-label-text">${subtask.name}</span>
+                </label>
+            `).join('');
+        }
+
+        // Render grammar subtasks
+        function renderGrammarSubtasks() {
+            const subtasks = getSubtasks('grammar');
+            const container = document.getElementById('grammar-subtasks-grid');
+            if (!container) return;
+
+            container.innerHTML = subtasks.map(subtask => `
+                <label class="subtask-item ${subtask.completed ? 'completed' : ''}">
+                    <input type="checkbox"
+                           class="subtask-checkbox"
+                           ${subtask.completed ? 'checked' : ''}
+                           onchange="toggleSubtask('grammar', ${subtask.id})">
+                    <span class="subtask-label-text">${subtask.name}</span>
+                </label>
+            `).join('');
+        }
+
+        // Render practice subtasks (list style)
+        function renderPracticeSubtasks() {
+            const subtasks = getSubtasks('practice');
+            const container = document.getElementById('practice-subtasks-list');
+            if (!container) return;
+
+            container.innerHTML = subtasks.map(subtask => `
+                <label class="subtask-list-item ${subtask.completed ? 'completed' : ''}">
+                    <input type="checkbox"
+                           class="subtask-list-checkbox"
+                           ${subtask.completed ? 'checked' : ''}
+                           onchange="toggleSubtask('practice', ${subtask.id})">
+                    <span class="subtask-list-label">${subtask.name}</span>
+                </label>
+            `).join('');
+        }
+
+        // Toggle subtask completion
+        function toggleSubtask(kpiId, subtaskId) {
+            const subtasks = getSubtasks(kpiId);
+            const subtask = subtasks.find(t => t.id === subtaskId);
+            if (subtask) {
+                subtask.completed = !subtask.completed;
+                saveSubtasks(kpiId, subtasks);
+
+                // Recalculate KPI value based on completed count
+                const completedCount = subtasks.filter(t => t.completed).length;
+                let newValue;
+
+                if (kpiId === 'vocab') {
+                    newValue = completedCount * 10;
+                } else if (kpiId === 'grammar') {
+                    newValue = completedCount * 10;
+                } else if (kpiId === 'practice') {
+                    newValue = completedCount;
+                }
+
+                // Save and update
+                const config = kpiConfig[kpiId];
+                newValue = Math.max(0, Math.min(config.target, newValue));
+                localStorage.setItem(config.storageKey, newValue);
+
+                // Re-render
+                if (kpiId === 'vocab') renderVocabSubtasks();
+                else if (kpiId === 'grammar') renderGrammarSubtasks();
+                else if (kpiId === 'practice') renderPracticeSubtasks();
+
+                updateDisplay(kpiId, newValue);
+                updateKgiProgress();
+            }
+        }
+
+        // Sync subtasks to value (when using +/- buttons)
+        function syncSubtasksToValue(kpiId, value) {
+            const subtasks = getSubtasks(kpiId);
+            let chunkSize;
+
+            if (kpiId === 'vocab') chunkSize = 10;
+            else if (kpiId === 'grammar') chunkSize = 10;
+            else if (kpiId === 'practice') chunkSize = 1;
+            else return;
+
+            const tasksToComplete = Math.floor(value / chunkSize);
+            subtasks.forEach((t, idx) => {
+                t.completed = idx < tasksToComplete;
+            });
+
+            saveSubtasks(kpiId, subtasks);
+
+            // Re-render
+            if (kpiId === 'vocab') renderVocabSubtasks();
+            else if (kpiId === 'grammar') renderGrammarSubtasks();
+            else if (kpiId === 'practice') renderPracticeSubtasks();
+        }
+
+        // Toggle subtasks view (expand/collapse)
+        function toggleSubtasksView(kpiId) {
+            const container = document.getElementById(`${kpiId}-subtasks`);
+            const btn = container.querySelector('.subtasks-toggle-btn');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                btn.classList.remove('collapsed');
+            } else {
+                container.style.display = 'none';
+                btn.classList.add('collapsed');
+            }
+        }
 
         function getImportanceLevels() {
             const importances = {};
@@ -442,6 +800,7 @@
                 updateDisplay(kpiId, value);
                 updateImportanceDisplay(kpiId);
             });
+            initializeSubtasks();
             updateKgiProgress();
         }
 
@@ -454,6 +813,7 @@
             current = Math.max(0, Math.min(target, current + delta));
 
             localStorage.setItem(storageKey, current);
+            syncSubtasksToValue(kpiId, current);
             updateDisplay(kpiId, current);
             updateKgiProgress();
         }
@@ -511,10 +871,12 @@
                     const importanceKey = kpiConfig[kpiId].importanceKey;
                     localStorage.removeItem(storageKey);
                     localStorage.removeItem(importanceKey);
+                    localStorage.removeItem(`kgi_${kpiId}_subtasks`);
                     localStorage.setItem(importanceKey, defaultImportance[kpiId]);
                     updateDisplay(kpiId, initialValues[kpiId]);
                     updateImportanceDisplay(kpiId);
                 });
+                initializeSubtasks();
                 updateKgiProgress();
             }
         }

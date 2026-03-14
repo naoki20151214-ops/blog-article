@@ -755,10 +755,59 @@
         };
 
         const initialValues = {
-            vocab: 45,
-            grammar: 28,
-            practice: 1
+            vocab: 0,
+            grammar: 0,
+            practice: 0
         };
+
+        // ===== CHANGE HISTORY TRACKING SYSTEM =====
+
+        // Get change history from localStorage
+        function getChangeHistory() {
+            const stored = localStorage.getItem('kgi_history');
+            return stored ? JSON.parse(stored) : [];
+        }
+
+        // Save change history to localStorage
+        function saveChangeHistory(history) {
+            localStorage.setItem('kgi_history', JSON.stringify(history));
+        }
+
+        // Record a single change (called by all update functions)
+        function recordChange(kpiId, oldValue, newValue, source, subtaskId = null) {
+            if (oldValue === newValue) return; // Don't record zero-change
+
+            const history = getChangeHistory();
+            const change = {
+                timestamp: Date.now(),
+                kpiId: kpiId,
+                oldValue: oldValue,
+                newValue: newValue,
+                changeAmount: newValue - oldValue,
+                source: source,
+                subtaskId: subtaskId
+            };
+
+            history.push(change);
+            saveChangeHistory(history);
+        }
+
+        // Get history for a specific KPI (optional query function)
+        function getKpiHistory(kpiId) {
+            return getChangeHistory().filter(change => change.kpiId === kpiId);
+        }
+
+        // Get cumulative stats for a KPI (optional query function)
+        function getKpiStats(kpiId) {
+            const history = getKpiHistory(kpiId);
+            return {
+                totalChanges: history.length,
+                totalIncrease: history.filter(c => c.changeAmount > 0).reduce((s, c) => s + c.changeAmount, 0),
+                totalDecrease: history.filter(c => c.changeAmount < 0).reduce((s, c) => s + c.changeAmount, 0),
+                firstRecorded: history.length > 0 ? history[0].timestamp : null,
+                lastChanged: history.length > 0 ? history[history.length - 1].timestamp : null
+            };
+        }
 
         // ===== TASK QUEUE SYSTEM FUNCTIONS =====
 
@@ -1044,6 +1093,10 @@
             const subtasks = getSubtasks(kpiId);
             const subtask = subtasks.find(t => t.id === subtaskId);
             if (subtask) {
+                // Capture old value before modification
+                const config = kpiConfig[kpiId];
+                const oldValue = parseInt(localStorage.getItem(config.storageKey) || initialValues[kpiId]);
+
                 subtask.completed = !subtask.completed;
                 saveSubtasks(kpiId, subtasks);
 
@@ -1067,8 +1120,8 @@
                 }
 
                 // Save and update
-                const config = kpiConfig[kpiId];
                 newValue = Math.max(0, Math.min(config.target, newValue));
+                recordChange(kpiId, oldValue, newValue, 'subtask', subtaskId);
                 localStorage.setItem(config.storageKey, newValue);
 
                 // Re-render
@@ -1186,6 +1239,26 @@
         }
 
         function loadKPIs() {
+            // Initialize history tracking if not present
+            if (localStorage.getItem('kgi_history') === null) {
+                localStorage.setItem('kgi_history', JSON.stringify([]));
+            }
+
+            // Migration: Create initial records for existing KPI data
+            const history = getChangeHistory();
+            if (history.length === 0) {
+                Object.keys(kpiConfig).forEach(kpiId => {
+                    const storageKey = kpiConfig[kpiId].storageKey;
+                    const stored = localStorage.getItem(storageKey);
+                    if (stored !== null) {
+                        const value = parseInt(stored);
+                        if (value > 0) {
+                            recordChange(kpiId, 0, value, 'migration', null);
+                        }
+                    }
+                });
+            }
+
             loadImportances();
             Object.keys(kpiConfig).forEach(kpiId => {
                 const storageKey = kpiConfig[kpiId].storageKey;
@@ -1204,12 +1277,13 @@
             const storageKey = config.storageKey;
             const target = config.target;
 
-            let current = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
-            current = Math.max(0, Math.min(target, current + delta));
+            let oldValue = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
+            let newValue = Math.max(0, Math.min(target, oldValue + delta));
 
-            localStorage.setItem(storageKey, current);
-            syncSubtasksToValue(kpiId, current);
-            updateDisplay(kpiId, current);
+            recordChange(kpiId, oldValue, newValue, 'button');
+            localStorage.setItem(storageKey, newValue);
+            syncSubtasksToValue(kpiId, newValue);
+            updateDisplay(kpiId, newValue);
             updateKgiProgress();
         }
 
@@ -1264,6 +1338,11 @@
                 Object.keys(kpiConfig).forEach(kpiId => {
                     const storageKey = kpiConfig[kpiId].storageKey;
                     const importanceKey = kpiConfig[kpiId].importanceKey;
+
+                    // Record reset change before clearing
+                    const oldValue = parseInt(localStorage.getItem(storageKey) || initialValues[kpiId]);
+                    recordChange(kpiId, oldValue, 0, 'reset', null);
+
                     localStorage.removeItem(storageKey);
                     localStorage.removeItem(importanceKey);
                     localStorage.removeItem(`kgi_${kpiId}_subtasks`);

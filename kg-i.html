@@ -264,24 +264,36 @@
         /* Grid for vocabulary and grammar checkboxes */
         .subtasks-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
             gap: 8px;
+        }
+        /* Subtask item wrapper for button - occupy grid cell */
+        .subtask-item-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            padding: 8px 6px;
+            transition: all 0.2s;
+        }
+        .subtask-item-wrapper:hover {
+            background: #f5f5f5;
+            border-color: #667eea;
         }
         /* Individual Subtask Checkbox Item (Grid style) */
         .subtask-item {
             display: flex;
             align-items: center;
             gap: 6px;
-            padding: 8px 10px;
-            background: white;
-            border-radius: 4px;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
             cursor: pointer;
-            transition: all 0.2s;
-            border: 1px solid #ddd;
-        }
-        .subtask-item:hover {
-            background: #f5f5f5;
-            border-color: #667eea;
+            transition: none;
+            border: none;
+            flex-grow: 1;
         }
         .subtask-checkbox {
             appearance: none;
@@ -323,10 +335,11 @@
             flex-direction: column;
             gap: 8px;
         }
-        .subtask-list-item {
+        /* Practice task wrapper with button */
+        .subtask-list-item-wrapper {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             padding: 12px;
             background: white;
             border-radius: 4px;
@@ -334,10 +347,27 @@
             transition: all 0.2s;
             border: 1px solid #ddd;
         }
-        .subtask-list-item:hover {
+        .subtask-list-item-wrapper:hover {
             background: #f5f5f5;
             border-color: #667eea;
             transform: translateX(2px);
+        }
+        .subtask-list-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0;
+            background: transparent;
+            border-radius: 0;
+            cursor: pointer;
+            transition: none;
+            border: none;
+            flex-grow: 1;
+        }
+        .subtask-list-item:hover {
+            background: transparent;
+            border-color: transparent;
+            transform: none;
         }
         .subtask-list-item.completed {
             background: #f0f7ff;

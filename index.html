@@ -89,6 +89,123 @@
             transform: translateY(-3px);
             box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
         }
+        /* Dashboard Styles */
+        #kgi-dashboard {
+            max-width: 1200px;
+            width: 100%;
+        }
+        .dashboard-title {
+            text-align: center;
+            color: white;
+            font-size: 32px;
+            margin-bottom: 40px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+        .kgi-progress-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .kgi-progress-section h2 {
+            color: #667eea;
+            margin: 0 0 20px 0;
+            font-size: 20px;
+        }
+        .progress-bar-container {
+            width: 100%;
+            height: 30px;
+            background-color: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 15px 0;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+        }
+        .kgi-progress-percentage {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+        .kpi-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .kpi-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            border-left: 4px solid #667eea;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s, border-left-color 0.3s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .kpi-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            border-left-color: #764ba2;
+        }
+        .kpi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .kpi-header h3 {
+            margin: 0;
+            color: #333;
+            font-size: 18px;
+        }
+        .kpi-icon {
+            margin-right: 8px;
+        }
+        .importance-badge {
+            background-color: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            min-width: 30px;
+            text-align: center;
+        }
+        .kpi-progress-info {
+            text-align: left;
+        }
+        .progress-text {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        .kpi-progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .kpi-progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.5s ease;
+        }
+        .progress-percentage {
+            font-size: 16px;
+            font-weight: bold;
+            color: #667eea;
+            text-align: right;
+        }
     </style>
 </head>
 <body>
@@ -103,16 +220,173 @@
     </nav>
 
     <div class="container">
-        <div class="home-container">
-            <h1>ようこそ</h1>
-            <p class="welcome-text">
-                このサイトへようこそ！KG I は、KPI トラッキング システムです。毎日の目標達成と進捗管理に役立つツールをご利用ください。
-            </p>
-            <div class="navigation-links">
-                <a href="kg-i.html" class="nav-link">KG I</a>
-                <a href="changelog.html" class="nav-link">変更履歴</a>
+        <div id="kgi-dashboard">
+            <h1 class="dashboard-title">📊 KGI ダッシュボード</h1>
+            <div class="kgi-progress-section">
+                <h2>🎯 全体進捗</h2>
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill" id="kgi-progress-bar" style="width: 0%"></div>
+                </div>
+                <div class="kgi-progress-percentage" id="kgi-progress-percentage">0%</div>
+            </div>
+            <div class="kpi-cards-grid" id="kpi-cards-grid">
+                <!-- KPI cards will be dynamically generated here -->
             </div>
         </div>
     </div>
+
+    <script>
+        // KPI Configuration
+        const kpiConfig = {
+            vocab: {
+                target: 100,
+                storageKey: 'kgi_vocab',
+                importanceKey: 'kgi_importance_vocab',
+                name: '英単語',
+                icon: '📚'
+            },
+            grammar: {
+                target: 50,
+                storageKey: 'kgi_grammar',
+                importanceKey: 'kgi_importance_grammar',
+                name: '英文法',
+                icon: '📖'
+            },
+            practice: {
+                target: 3,
+                storageKey: 'kgi_practice',
+                importanceKey: 'kgi_importance_practice',
+                name: '過去問',
+                icon: '✏️'
+            }
+        };
+
+        // Default Importance Levels
+        const defaultImportance = {
+            vocab: 'B',
+            grammar: 'B',
+            practice: 'B'
+        };
+
+        /**
+         * Get KPI data from localStorage
+         */
+        function getDashboardData() {
+            const data = {};
+            for (const [kpiId, config] of Object.entries(kpiConfig)) {
+                const current = parseInt(localStorage.getItem(config.storageKey)) || 0;
+                const importance = localStorage.getItem(config.importanceKey) || defaultImportance[kpiId];
+                data[kpiId] = {
+                    current,
+                    target: config.target,
+                    importance,
+                    name: config.name,
+                    icon: config.icon
+                };
+            }
+            return data;
+        }
+
+        /**
+         * Convert ABC importance levels to weights
+         */
+        function convertABCToWeights(dashboardData) {
+            const weights = { A: 3, B: 2, C: 1 };
+            const importanceMap = {};
+            let totalWeight = 0;
+
+            for (const [kpiId, data] of Object.entries(dashboardData)) {
+                const weight = weights[data.importance] || 2;
+                importanceMap[kpiId] = weight;
+                totalWeight += weight;
+            }
+
+            const percentages = {};
+            for (const [kpiId, weight] of Object.entries(importanceMap)) {
+                percentages[kpiId] = (weight / totalWeight) * 100;
+            }
+            return percentages;
+        }
+
+        /**
+         * Calculate KGI overall progress
+         */
+        function calculateKgiProgress(dashboardData) {
+            const importancePercentages = convertABCToWeights(dashboardData);
+            let totalProgress = 0;
+
+            for (const [kpiId, data] of Object.entries(dashboardData)) {
+                const kpiProgress = (data.current / data.target) * 100;
+                const weightedProgress = kpiProgress * (importancePercentages[kpiId] / 100);
+                totalProgress += weightedProgress;
+            }
+
+            return Math.round(totalProgress);
+        }
+
+        /**
+         * Update KGI progress bar
+         */
+        function updateKgiProgressBar(percentage) {
+            const progressBar = document.getElementById('kgi-progress-bar');
+            const percentageDisplay = document.getElementById('kgi-progress-percentage');
+            if (progressBar) {
+                progressBar.style.width = percentage + '%';
+            }
+            if (percentageDisplay) {
+                percentageDisplay.textContent = percentage + '%';
+            }
+        }
+
+        /**
+         * Render KPI cards dynamically
+         */
+        function renderKpiCards(dashboardData) {
+            const cardsGrid = document.getElementById('kpi-cards-grid');
+            if (!cardsGrid) return;
+
+            cardsGrid.innerHTML = '';
+
+            for (const [kpiId, data] of Object.entries(dashboardData)) {
+                const percentage = Math.round((data.current / data.target) * 100);
+
+                const card = document.createElement('a');
+                card.href = 'kg-i.html';
+                card.className = 'kpi-card';
+
+                card.innerHTML = `
+                    <div class="kpi-header">
+                        <h3><span class="kpi-icon">${data.icon}</span> ${data.name}</h3>
+                        <div class="importance-badge">${data.importance}</div>
+                    </div>
+                    <div class="kpi-progress-info">
+                        <div class="progress-text">${data.current} / ${data.target}</div>
+                        <div class="kpi-progress-bar">
+                            <div class="kpi-progress-bar-fill" style="width: ${percentage}%"></div>
+                        </div>
+                        <div class="progress-percentage">${percentage}%</div>
+                    </div>
+                `;
+
+                cardsGrid.appendChild(card);
+            }
+        }
+
+        /**
+         * Initialize dashboard
+         */
+        function initDashboard() {
+            const dashboardData = getDashboardData();
+            const kgiProgress = calculateKgiProgress(dashboardData);
+            updateKgiProgressBar(kgiProgress);
+            renderKpiCards(dashboardData);
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', initDashboard);
+
+        // Reinitialize when page gains focus (returning from kg-i.html)
+        window.addEventListener('focus', initDashboard);
+    </script>
 </body>
 </html>

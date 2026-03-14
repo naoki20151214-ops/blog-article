@@ -19,6 +19,24 @@ class ConfigManager {
     if (stored) {
       try {
         this.config = JSON.parse(stored);
+
+        // Auto-migrate single KGI format to multiple KGI format
+        if (this.config.kgi && !this.config.kgis) {
+          console.log('🔄 Auto-migrating single KGI to multiple KGI format');
+          const singleKgi = this.config.kgi;
+          this.config.kgis = [singleKgi];
+          this.config.currentKgiId = singleKgi.id;
+          delete this.config.kgi;
+          this.save();
+          console.log('✅ Migration completed');
+        }
+
+        // Ensure currentKgiId is set
+        if (!this.config.currentKgiId && this.config.kgis && this.config.kgis.length > 0) {
+          this.config.currentKgiId = this.config.kgis[0].id;
+          this.save();
+        }
+
         console.log('✅ Loaded existing configuration');
         return true;
       } catch (error) {
@@ -34,6 +52,16 @@ class ConfigManager {
       if (migrationSuccess) {
         const stored = localStorage.getItem('kgi_config');
         this.config = JSON.parse(stored);
+
+        // Auto-migrate single KGI format to multiple KGI format (for v1 data)
+        if (this.config.kgi && !this.config.kgis) {
+          const singleKgi = this.config.kgi;
+          this.config.kgis = [singleKgi];
+          this.config.currentKgiId = singleKgi.id;
+          delete this.config.kgi;
+          this.save();
+        }
+
         return true;
       }
     }
@@ -47,24 +75,30 @@ class ConfigManager {
    * Create default configuration
    */
   createDefaultConfig() {
+    const defaultKgiId = 'kgi_' + Date.now();
+
     this.config = {
       version: 2,
       createdAt: Date.now(),
       modifiedAt: Date.now(),
 
-      kgi: {
-        id: 'kgi_' + Date.now(),
-        name: '来週のテストで100点を取る',
-        emoji: '🎯',
-        description: 'Test score target',
-        createdAt: Date.now(),
-        modifiedAt: Date.now()
-      },
+      // Multiple KGI support
+      kgis: [
+        {
+          id: defaultKgiId,
+          name: '来週のテストで100点を取る',
+          emoji: '🎯',
+          description: 'Test score target',
+          createdAt: Date.now(),
+          modifiedAt: Date.now()
+        }
+      ],
+      currentKgiId: defaultKgiId,
 
       kpis: [
         {
           id: 'kpi_1',
-          kgiId: this.config?.kgi?.id || 'kgi_' + Date.now(),
+          kgiId: defaultKgiId,
           name: '📚 英単語',
           emoji: '📚',
           type: 'manual',
@@ -82,7 +116,7 @@ class ConfigManager {
         },
         {
           id: 'kpi_2',
-          kgiId: this.config?.kgi?.id || 'kgi_' + Date.now(),
+          kgiId: defaultKgiId,
           name: '📖 英文法',
           emoji: '📖',
           type: 'manual',
@@ -100,7 +134,7 @@ class ConfigManager {
         },
         {
           id: 'kpi_3',
-          kgiId: this.config?.kgi?.id || 'kgi_' + Date.now(),
+          kgiId: defaultKgiId,
           name: '✏️ 過去問',
           emoji: '✏️',
           type: 'manual',
@@ -171,10 +205,40 @@ class ConfigManager {
    */
   getKGI(kgiId = null) {
     const config = this.getConfig();
+    const kgis = config.kgis || [];
+
     if (kgiId) {
-      return config.kgi.id === kgiId ? config.kgi : null;
+      return kgis.find(kgi => kgi.id === kgiId) || null;
     }
-    return config.kgi;
+
+    // Return current KGI if no ID specified
+    if (config.currentKgiId) {
+      return kgis.find(kgi => kgi.id === config.currentKgiId) || null;
+    }
+
+    // Fallback to first KGI
+    return kgis.length > 0 ? kgis[0] : null;
+  }
+
+  /**
+   * Get all KGIs
+   */
+  getKGIs() {
+    return this.getConfig().kgis || [];
+  }
+
+  /**
+   * Get current KGI ID
+   */
+  getCurrentKgiId() {
+    return this.getConfig().currentKgiId;
+  }
+
+  /**
+   * Get current KGI
+   */
+  getCurrentKGI() {
+    return this.getKGI();
   }
 
   /**
@@ -229,9 +293,12 @@ class ConfigManager {
       throw new Error('Invalid KPI data');
     }
 
+    const config = this.getConfig();
+    const kgiId = kpiData.kgiId || config.currentKgiId;
+
     const newKPI = {
       id: 'kpi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      kgiId: kpiData.kgiId || this.getConfig().kgi.id,
+      kgiId: kgiId,
       name: kpiData.name,
       emoji: kpiData.emoji || '📊',
       type: kpiData.type || 'manual',
@@ -239,14 +306,14 @@ class ConfigManager {
       current: kpiData.current || 0,
       unit: kpiData.unit || '',
       importance: kpiData.importance || 'B',
-      order: this.getKPIs().length,
+      order: config.kpis.filter(k => k.kgiId === kgiId).length,
       subtaskSyncType: 'auto',
       subtaskChunkSize: kpiData.subtaskChunkSize || 1,
       createdAt: Date.now(),
       modifiedAt: Date.now()
     };
 
-    this.getConfig().kpis.push(newKPI);
+    config.kpis.push(newKPI);
     this.save();
     this.notifyListeners('kpi_added', newKPI);
     return newKPI;
@@ -347,12 +414,112 @@ class ConfigManager {
   /**
    * Update KGI
    */
-  updateKGI(updates) {
-    const kgi = this.getConfig().kgi;
+  updateKGI(kgiId, updates) {
+    const config = this.getConfig();
+    let kgi;
+
+    // Support both old API (single arg) and new API (kgiId, updates)
+    if (typeof kgiId === 'object' && updates === undefined) {
+      // Old API: updateKGI(updates) - update current KGI
+      updates = kgiId;
+      kgi = this.getCurrentKGI();
+    } else {
+      // New API: updateKGI(kgiId, updates) - update specific KGI
+      kgi = config.kgis.find(k => k.id === kgiId);
+    }
+
+    if (!kgi) {
+      throw new Error('KGI not found');
+    }
+
     Object.assign(kgi, updates, { modifiedAt: Date.now() });
     this.save();
     this.notifyListeners('kgi_updated', kgi);
     return kgi;
+  }
+
+  /**
+   * Add new KGI
+   */
+  addKGI(kgiData) {
+    if (!this.validateKGI(kgiData)) {
+      throw new Error('Invalid KGI data');
+    }
+
+    const newKGI = {
+      id: 'kgi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      name: kgiData.name,
+      emoji: kgiData.emoji || '🎯',
+      description: kgiData.description || '',
+      createdAt: Date.now(),
+      modifiedAt: Date.now()
+    };
+
+    const config = this.getConfig();
+    config.kgis.push(newKGI);
+    config.currentKgiId = newKGI.id; // Automatically select new KGI
+    this.save();
+    this.notifyListeners('kgi_added', newKGI);
+    return newKGI;
+  }
+
+  /**
+   * Delete KGI and its associated KPIs and tasks
+   */
+  deleteKGI(kgiId) {
+    const config = this.getConfig();
+    const index = config.kgis.findIndex(kgi => kgi.id === kgiId);
+
+    if (index === -1) {
+      throw new Error('KGI not found: ' + kgiId);
+    }
+
+    // Delete associated KPIs and tasks
+    const kpisToDelete = config.kpis.filter(kpi => kpi.kgiId === kgiId);
+    kpisToDelete.forEach(kpi => {
+      config.tasks = config.tasks.filter(task => task.kpiId !== kpi.id);
+    });
+    config.kpis = config.kpis.filter(kpi => kpi.kgiId !== kgiId);
+
+    // Remove KGI
+    config.kgis.splice(index, 1);
+
+    // Update currentKgiId if needed
+    if (config.currentKgiId === kgiId) {
+      config.currentKgiId = config.kgis.length > 0 ? config.kgis[0].id : null;
+    }
+
+    this.save();
+    this.notifyListeners('kgi_deleted', kgiId);
+  }
+
+  /**
+   * Select a KGI as current
+   */
+  selectKGI(kgiId) {
+    const kgi = this.getKGI(kgiId);
+    if (!kgi) {
+      throw new Error('KGI not found: ' + kgiId);
+    }
+
+    this.getConfig().currentKgiId = kgiId;
+    this.save();
+    this.notifyListeners('kgi_selected', kgiId);
+  }
+
+  /**
+   * Validate KGI data
+   */
+  validateKGI(kgiData) {
+    if (!kgiData.name || typeof kgiData.name !== 'string' || kgiData.name.trim() === '') {
+      return false;
+    }
+
+    if (kgiData.emoji && typeof kgiData.emoji !== 'string') {
+      return false;
+    }
+
+    return true;
   }
 
   /**

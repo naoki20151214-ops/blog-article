@@ -9,6 +9,7 @@ class KGIStore {
     this.taskQueue = [];
     this.changeHistory = [];
     this.listeners = [];
+    this.currentKgiId = null; // Current selected KGI
     this.initialize();
   }
 
@@ -42,6 +43,9 @@ class KGIStore {
     }
     // If using new config (v2), don't override current values from legacy keys
     // The migration process already set the correct current values
+
+    // Initialize currentKgiId from config
+    this.currentKgiId = config.currentKgiId || (config.kgis && config.kgis.length > 0 ? config.kgis[0].id : null);
 
     console.log('✅ KGIStore initialized');
   }
@@ -116,9 +120,15 @@ class KGIStore {
   /**
    * Calculate overall KGI progress based on importance weights
    */
-  calculateKGIProgress() {
-    const kpis = this.configManager.getKPIs();
-    const weights = this._calculateImportanceWeights();
+  calculateKGIProgress(kgiId = null) {
+    // Use specified KGI or default to current KGI
+    const targetKgiId = kgiId || this.currentKgiId;
+    const allKpis = this.configManager.getKPIs();
+    const kpis = allKpis.filter(kpi => kpi.kgiId === targetKgiId);
+
+    if (kpis.length === 0) return 0;
+
+    const weights = this._calculateImportanceWeights(kgiId);
 
     let totalProgress = 0;
     let totalWeight = 0;
@@ -136,8 +146,10 @@ class KGIStore {
   /**
    * Calculate importance weights (A=3, B=2, C=1)
    */
-  _calculateImportanceWeights() {
-    const kpis = this.configManager.getKPIs();
+  _calculateImportanceWeights(kgiId = null) {
+    const targetKgiId = kgiId || this.currentKgiId;
+    const allKpis = this.configManager.getKPIs();
+    const kpis = allKpis.filter(kpi => kpi.kgiId === targetKgiId);
     const weights = {};
     const importanceMap = { A: 3, B: 2, C: 1 };
 
@@ -389,6 +401,34 @@ class KGIStore {
         console.error('Error in store listener:', error);
       }
     });
+  }
+
+  /**
+   * Select a KGI
+   */
+  selectKGI(kgiId) {
+    const kgi = this.configManager.getKGI(kgiId);
+    if (!kgi) {
+      throw new Error('KGI not found: ' + kgiId);
+    }
+    this.currentKgiId = kgiId;
+    this.configManager.selectKGI(kgiId);
+    this.notifyListeners('kgi_selected', kgiId);
+  }
+
+  /**
+   * Get current KGI
+   */
+  getCurrentKGI() {
+    return this.configManager.getKGI(this.currentKgiId);
+  }
+
+  /**
+   * Get KPIs for current KGI
+   */
+  getKPIsForCurrentKGI() {
+    if (!this.currentKgiId) return [];
+    return this.configManager.getKPIsByKGI(this.currentKgiId);
   }
 
   /**

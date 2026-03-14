@@ -296,9 +296,10 @@
     <nav class="navbar">
         <div class="navbar-content">
             <a href="index.html" class="home">ホーム</a>
-            <div>
+            <div style="display: flex; align-items: center; gap: 20px;">
                 <a href="kg-i.html">KG I</a>
                 <a href="changelog.html">変更履歴</a>
+                <button onclick="openKGIModal()" style="background: #667eea; color: white; border: none; padding: 8px 12px; border-radius: 4px; cursor: pointer; font-size: 14px;">+ KGI新規作成</button>
             </div>
         </div>
     </nav>
@@ -306,6 +307,12 @@
     <div class="container">
         <div id="kgi-dashboard">
             <h1 class="dashboard-title">📊 KGI ダッシュボード</h1>
+            <div id="kgi-selector-section" style="text-align: center; margin-bottom: 20px; display: none;">
+                <label for="kgi-selector" style="color: white; margin-right: 10px;">KGI選択:</label>
+                <select id="kgi-selector" onchange="switchKGI(this.value)" style="padding: 8px; border-radius: 4px; border: none; font-size: 14px;">
+                    <!-- Options will be populated by JavaScript -->
+                </select>
+            </div>
             <div class="kgi-progress-section">
                 <h2>🎯 全体進捗</h2>
                 <div class="progress-bar-container">
@@ -325,7 +332,59 @@
         </div>
     </div>
 
+    <!-- KGI Creation Modal -->
+    <div id="kgi-creation-modal" class="modal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.7); z-index: 2000; align-items: center; justify-content: center;">
+        <div class="modal-content" style="background: white; padding: 30px; border-radius: 10px; max-width: 500px; width: 90%; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+            <h2 style="color: #667eea; margin-top: 0;">KGI新規作成</h2>
+            <form id="kgi-creation-form" onsubmit="submitKGI(event)">
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">KGI名</label>
+                    <input type="text" id="kgi-name-input" placeholder="例: テスト対策" required style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px;">
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">絵文字を選択</label>
+                    <div id="kgi-emoji-picker" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '🎯')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">🎯</button>
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '📚')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">📚</button>
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '💪')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">💪</button>
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '🚀')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">🚀</button>
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '🏆')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">🏆</button>
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '⭐')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">⭐</button>
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '💡')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">💡</button>
+                        <button type="button" class="emoji-btn" onclick="selectKGIEmoji(this, '🎨')" style="padding: 10px; font-size: 24px; border: 2px solid #ddd; background: white; border-radius: 4px; cursor: pointer;">🎨</button>
+                    </div>
+                    <input type="hidden" id="kgi-emoji-input" value="🎯">
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 5px; font-weight: 600;">説明（オプション）</label>
+                    <textarea id="kgi-description-input" placeholder="このKGIについての説明" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; resize: vertical; min-height: 60px;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                    <button type="button" onclick="closeKGIModal()" style="padding: 10px 20px; background: #ddd; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">キャンセル</button>
+                    <button type="submit" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600;">作成</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/utils/ConfigManager.js"></script>
+    <script src="js/utils/KGIStore.js"></script>
+    <script src="js/utils/MigrationHelper.js"></script>
+
     <script>
+        // Initialize ConfigManager and KGIStore
+        let configManager;
+        let kgiStore;
+
+        function initializeSystem() {
+            configManager = new ConfigManager();
+            configManager.initialize();
+            kgiStore = new KGIStore(configManager);
+        }
+
         // KPI Configuration
         const kpiConfig = {
             vocab: {
@@ -359,21 +418,24 @@
         };
 
         /**
-         * Get KPI data from localStorage
+         * Get KPI data from ConfigManager/KGIStore
          */
         function getDashboardData() {
             const data = {};
-            for (const [kpiId, config] of Object.entries(kpiConfig)) {
-                const current = parseInt(localStorage.getItem(config.storageKey)) || 0;
-                const importance = localStorage.getItem(config.importanceKey) || defaultImportance[kpiId];
-                data[kpiId] = {
-                    current,
-                    target: config.target,
-                    importance,
-                    name: config.name,
-                    icon: config.icon
+            const kpis = kgiStore.getKPIsForCurrentKGI();
+
+            kpis.forEach(kpi => {
+                data[kpi.id] = {
+                    id: kpi.id,
+                    current: kpi.current,
+                    target: kpi.target,
+                    importance: kpi.importance,
+                    name: kpi.name,
+                    icon: kpi.emoji,
+                    unit: kpi.unit
                 };
-            }
+            });
+
             return data;
         }
 
@@ -515,11 +577,124 @@
          * Initialize dashboard
          */
         function initDashboard() {
+            // Initialize system first time
+            if (!configManager) {
+                initializeSystem();
+            }
+
+            // Render KGI selector
+            updateKGISelector();
+
+            // Render dashboard
             const dashboardData = getDashboardData();
-            const kgiProgress = calculateKgiProgress(dashboardData);
+            const kgiProgress = kgiStore.calculateKGIProgress();
             updateKgiProgressBar(kgiProgress);
             createContributionVisualization(dashboardData);
             renderKpiCards(dashboardData);
+        }
+
+        /**
+         * Update KGI selector dropdown
+         */
+        function updateKGISelector() {
+            const kgis = configManager.getKGIs();
+            const selector = document.getElementById('kgi-selector');
+            const selectorSection = document.getElementById('kgi-selector-section');
+
+            // Only show selector if multiple KGIs exist
+            if (kgis.length > 1) {
+                selectorSection.style.display = 'block';
+                selector.innerHTML = '';
+                kgis.forEach(kgi => {
+                    const option = document.createElement('option');
+                    option.value = kgi.id;
+                    option.textContent = (kgi.emoji || '🎯') + ' ' + kgi.name;
+                    if (kgi.id === configManager.getCurrentKgiId()) {
+                        option.selected = true;
+                    }
+                    selector.appendChild(option);
+                });
+            } else {
+                selectorSection.style.display = 'none';
+            }
+        }
+
+        /**
+         * Switch KGI
+         */
+        function switchKGI(kgiId) {
+            kgiStore.selectKGI(kgiId);
+            initDashboard();
+        }
+
+        /**
+         * Open KGI creation modal
+         */
+        function openKGIModal() {
+            const modal = document.getElementById('kgi-creation-modal');
+            modal.style.display = 'flex';
+            document.getElementById('kgi-name-input').focus();
+        }
+
+        /**
+         * Close KGI creation modal
+         */
+        function closeKGIModal() {
+            const modal = document.getElementById('kgi-creation-modal');
+            modal.style.display = 'none';
+            document.getElementById('kgi-creation-form').reset();
+            document.getElementById('kgi-emoji-input').value = '🎯';
+            // Reset emoji button selection
+            document.querySelectorAll('#kgi-emoji-picker .emoji-btn').forEach(btn => {
+                btn.style.borderColor = '#ddd';
+                btn.style.background = 'white';
+            });
+        }
+
+        /**
+         * Select emoji for KGI
+         */
+        function selectKGIEmoji(element, emoji) {
+            document.querySelectorAll('#kgi-emoji-picker .emoji-btn').forEach(btn => {
+                btn.style.borderColor = '#ddd';
+                btn.style.background = 'white';
+            });
+            element.style.borderColor = '#667eea';
+            element.style.background = '#e8eaf6';
+            document.getElementById('kgi-emoji-input').value = emoji;
+        }
+
+        /**
+         * Submit KGI creation form
+         */
+        function submitKGI(event) {
+            event.preventDefault();
+
+            const name = document.getElementById('kgi-name-input').value;
+            const emoji = document.getElementById('kgi-emoji-input').value;
+            const description = document.getElementById('kgi-description-input').value;
+
+            if (!name || !emoji) {
+                alert('KGI名と絵文字を入力してください');
+                return;
+            }
+
+            try {
+                const newKGI = configManager.addKGI({
+                    name,
+                    emoji,
+                    description
+                });
+
+                kgiStore.selectKGI(newKGI.id);
+                closeKGIModal();
+
+                // Redirect to KPI creation page with new KGI ID
+                window.location.href = 'kg-i.html?kgiId=' + newKGI.id;
+            } catch (error) {
+                console.error('Error creating KGI:', error);
+                alert('KGI作成に失敗しました: ' + error.message);
+            }
         }
 
         /**

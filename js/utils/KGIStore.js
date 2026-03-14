@@ -25,15 +25,23 @@ class KGIStore {
     this.changeHistory = historyJson ? JSON.parse(historyJson) : [];
 
     // Load KPI current values from localStorage (for backward compatibility)
+    // Only load legacy values if we haven't migrated yet
     const config = this.configManager.getConfig();
-    config.kpis.forEach(kpi => {
-      if (kpi.storageKey) {
-        const storedValue = localStorage.getItem(kpi.storageKey);
-        if (storedValue !== null) {
-          kpi.current = parseInt(storedValue) || 0;
+    const hasNewConfig = localStorage.getItem('kgi_config') !== null;
+
+    if (!hasNewConfig) {
+      // Legacy system - load from old storage keys
+      config.kpis.forEach(kpi => {
+        if (kpi.storageKey) {
+          const storedValue = localStorage.getItem(kpi.storageKey);
+          if (storedValue !== null) {
+            kpi.current = parseInt(storedValue) || 0;
+          }
         }
-      }
-    });
+      });
+    }
+    // If using new config (v2), don't override current values from legacy keys
+    // The migration process already set the correct current values
 
     console.log('✅ KGIStore initialized');
   }

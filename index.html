@@ -149,11 +149,27 @@
             text-decoration: none;
             color: inherit;
             display: block;
+            position: relative;
         }
         .kpi-card:hover {
             transform: translateY(-3px);
             box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
             border-left-color: #764ba2;
+        }
+        .kpi-card.importance-a {
+            border-left-color: #764ba2;
+        }
+        .kpi-card.importance-b {
+            border-left-color: #667eea;
+        }
+        .kpi-card.importance-c {
+            border-left-color: #999;
+        }
+        .kpi-card:hover.importance-a {
+            border-left-color: #9d63c9;
+        }
+        .kpi-card:hover.importance-c {
+            border-left-color: #bbb;
         }
         .kpi-header {
             display: flex;
@@ -206,6 +222,74 @@
             color: #667eea;
             text-align: right;
         }
+        /* KPI Contribution Visualization Styles */
+        .kgi-contribution-section {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            margin-bottom: 40px;
+        }
+        .kgi-contribution-section h3 {
+            color: #667eea;
+            margin: 0 0 25px 0;
+            font-size: 18px;
+            text-align: center;
+        }
+        .contribution-breakdown {
+            display: flex;
+            gap: 10px;
+            align-items: flex-end;
+            height: 80px;
+            margin-bottom: 20px;
+        }
+        .contribution-bar-wrapper {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+        }
+        .contribution-bar {
+            width: 100%;
+            height: 100%;
+            background-color: #e0e0e0;
+            border-radius: 5px 5px 0 0;
+            overflow: hidden;
+            position: relative;
+            min-height: 20px;
+        }
+        .contribution-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.5s ease;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 5px;
+            font-size: 12px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        .contribution-label {
+            font-size: 13px;
+            color: #333;
+            margin-top: 8px;
+            font-weight: 500;
+            text-align: center;
+            min-height: 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .contribution-label-name {
+            font-weight: 600;
+        }
+        .contribution-label-weight {
+            font-size: 11px;
+            color: #999;
+        }
     </style>
 </head>
 <body>
@@ -228,6 +312,12 @@
                     <div class="progress-bar-fill" id="kgi-progress-bar" style="width: 0%"></div>
                 </div>
                 <div class="kgi-progress-percentage" id="kgi-progress-percentage">0%</div>
+            </div>
+            <div class="kgi-contribution-section" id="contribution-section">
+                <h3>📊 KPI別の加重貢献度</h3>
+                <div class="contribution-breakdown" id="contribution-breakdown">
+                    <!-- Contribution bars will be dynamically generated here -->
+                </div>
             </div>
             <div class="kpi-cards-grid" id="kpi-cards-grid">
                 <!-- KPI cards will be dynamically generated here -->
@@ -339,6 +429,48 @@
         }
 
         /**
+         * Create contribution visualization
+         */
+        function createContributionVisualization(dashboardData) {
+            const breakdown = document.getElementById('contribution-breakdown');
+            if (!breakdown) return;
+
+            breakdown.innerHTML = '';
+
+            const importancePercentages = convertABCToWeights(dashboardData);
+
+            for (const [kpiId, data] of Object.entries(dashboardData)) {
+                const weight = importancePercentages[kpiId];
+                const kpiProgress = (data.current / data.target) * 100;
+                const contribution = (kpiProgress * weight) / 100;
+
+                const wrapper = document.createElement('div');
+                wrapper.className = 'contribution-bar-wrapper';
+
+                const barContainer = document.createElement('div');
+                barContainer.className = 'contribution-bar';
+
+                const barFill = document.createElement('div');
+                barFill.className = 'contribution-bar-fill';
+                barFill.style.height = weight + '%';
+                barFill.textContent = Math.round(weight) + '%';
+
+                barContainer.appendChild(barFill);
+
+                const label = document.createElement('div');
+                label.className = 'contribution-label';
+                label.innerHTML = `
+                    <span class="contribution-label-name">${data.icon} ${data.name}</span>
+                    <span class="contribution-label-weight">${data.importance}</span>
+                `;
+
+                wrapper.appendChild(barContainer);
+                wrapper.appendChild(label);
+                breakdown.appendChild(wrapper);
+            }
+        }
+
+        /**
          * Render KPI cards dynamically
          */
         function renderKpiCards(dashboardData) {
@@ -347,12 +479,16 @@
 
             cardsGrid.innerHTML = '';
 
+            const importancePercentages = convertABCToWeights(dashboardData);
+
             for (const [kpiId, data] of Object.entries(dashboardData)) {
                 const percentage = Math.round((data.current / data.target) * 100);
+                const weight = importancePercentages[kpiId];
+                const contribution = Math.round((percentage * weight) / 100);
 
                 const card = document.createElement('a');
                 card.href = 'kg-i.html';
-                card.className = 'kpi-card';
+                card.className = `kpi-card importance-${data.importance.toLowerCase()}`;
 
                 card.innerHTML = `
                     <div class="kpi-header">
@@ -365,6 +501,9 @@
                             <div class="kpi-progress-bar-fill" style="width: ${percentage}%"></div>
                         </div>
                         <div class="progress-percentage">${percentage}%</div>
+                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e0e0; font-size: 12px; color: #999;">
+                            KGI貢献度: <strong style="color: #667eea;">${contribution}%</strong>
+                        </div>
                     </div>
                 `;
 
@@ -379,8 +518,21 @@
             const dashboardData = getDashboardData();
             const kgiProgress = calculateKgiProgress(dashboardData);
             updateKgiProgressBar(kgiProgress);
+            createContributionVisualization(dashboardData);
             renderKpiCards(dashboardData);
         }
+
+        /**
+         * Handle storage changes (importance updates from kg-i.html)
+         */
+        window.addEventListener('storage', (event) => {
+            // Check if any importance key was changed
+            const importanceKeys = Object.values(kpiConfig).map(config => config.importanceKey);
+            if (importanceKeys.includes(event.key) || !event.key) {
+                // Reinitialize dashboard on importance change
+                initDashboard();
+            }
+        });
 
         // Initialize on page load
         window.addEventListener('load', initDashboard);

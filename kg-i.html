@@ -791,6 +791,7 @@
                         <div class="current-value" id="vocab-display">45</div>
                         <button class="control-btn" onclick="updateKPI('vocab', 1)">＋</button>
                     </div>
+                    <button class="detail-btn" onclick="openKPIDetailModal('vocab')" style="margin-top: 10px; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">詳細を見る</button>
                 </div>
 
                 <!-- KPI 2: 英文法 -->
@@ -829,6 +830,7 @@
                         <div class="current-value" id="grammar-display">28</div>
                         <button class="control-btn" onclick="updateKPI('grammar', 1)">＋</button>
                     </div>
+                    <button class="detail-btn" onclick="openKPIDetailModal('grammar')" style="margin-top: 10px; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">詳細を見る</button>
                 </div>
 
                 <!-- KPI 3: 過去問 -->
@@ -867,6 +869,7 @@
                         <div class="current-value" id="practice-display">1</div>
                         <button class="control-btn" onclick="updateKPI('practice', 1)">＋</button>
                     </div>
+                    <button class="detail-btn" onclick="openKPIDetailModal('practice')" style="margin-top: 10px; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">詳細を見る</button>
                 </div>
             </div>
 
@@ -941,6 +944,85 @@
                             <button type="button" class="modal-btn modal-btn-cancel" onclick="closeCustomKPIModal()">キャンセル</button>
                         </div>
                     </form>
+                </div>
+            </div>
+
+            <!-- KPI Detail Modal -->
+            <div id="kpi-detail-modal" class="modal">
+                <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
+                    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <span id="detail-modal-emoji" style="font-size: 28px; margin-right: 10px;"></span>
+                            <span id="detail-modal-name"></span>
+                            <span id="detail-modal-importance" style="margin-left: 10px; font-size: 14px; color: white; background: #667eea; padding: 2px 8px; border-radius: 3px;"></span>
+                        </div>
+                        <button onclick="closeKPIDetailModal()" style="background: none; border: none; font-size: 24px; cursor: pointer;">✕</button>
+                    </div>
+
+                    <!-- Tab Navigation -->
+                    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+                        <button class="detail-tab-btn" onclick="switchDetailTab('subtasks')" style="padding: 10px 15px; background: none; border: none; cursor: pointer; font-weight: bold; border-bottom: 3px solid #667eea;">サブタスク</button>
+                        <button class="detail-tab-btn" onclick="switchDetailTab('history')" style="padding: 10px 15px; background: none; border: none; cursor: pointer; color: #999;">進捗履歴</button>
+                        <button class="detail-tab-btn" onclick="switchDetailTab('queue')" style="padding: 10px 15px; background: none; border: none; cursor: pointer; color: #999;">タスクキュー</button>
+                        <button class="detail-tab-btn" onclick="switchDetailTab('stats')" style="padding: 10px 15px; background: none; border: none; cursor: pointer; color: #999;">統計情報</button>
+                    </div>
+
+                    <!-- Subtasks Tab -->
+                    <div id="detail-subtasks-tab" class="detail-tab-content">
+                        <div style="margin-bottom: 15px; color: #666;">
+                            進捗: <span id="detail-progress" style="font-weight: bold; font-size: 16px;"></span>
+                        </div>
+                        <div class="progress-bar-container" style="margin-bottom: 20px;">
+                            <div class="progress-bar" id="detail-progress-bar" style="width: 0%; display: flex; align-items: center; justify-content: center;">
+                                <span id="detail-progress-percentage">0%</span>
+                            </div>
+                        </div>
+                        <div id="detail-all-subtasks" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Subtasks will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Progress History Tab -->
+                    <div id="detail-history-tab" class="detail-tab-content" style="display: none;">
+                        <div style="padding: 20px; background: #f9f9f9; border-radius: 5px;">
+                            <div style="margin-bottom: 15px;">
+                                <strong>進捗推移</strong>
+                            </div>
+                            <canvas id="detail-history-chart" style="max-width: 100%; margin-bottom: 20px;"></canvas>
+                            <div id="detail-history-timeline">
+                                <!-- Timeline will be rendered here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Task Queue Tab -->
+                    <div id="detail-queue-tab" class="detail-tab-content" style="display: none;">
+                        <div id="detail-queue-list" style="padding: 20px; background: #f9f9f9; border-radius: 5px;">
+                            <!-- Queue tasks will be rendered here -->
+                        </div>
+                    </div>
+
+                    <!-- Statistics Tab -->
+                    <div id="detail-stats-tab" class="detail-tab-content" style="display: none;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; padding: 20px; background: #f9f9f9; border-radius: 5px;">
+                            <div style="padding: 15px; background: white; border-radius: 5px; text-align: center;">
+                                <div style="font-size: 12px; color: #999; margin-bottom: 8px;">完了率</div>
+                                <div id="detail-completion-rate" style="font-size: 24px; font-weight: bold; color: #667eea;"></div>
+                            </div>
+                            <div style="padding: 15px; background: white; border-radius: 5px; text-align: center;">
+                                <div style="font-size: 12px; color: #999; margin-bottom: 8px;">平均日進捗</div>
+                                <div id="detail-daily-avg" style="font-size: 24px; font-weight: bold; color: #667eea;"></div>
+                            </div>
+                            <div style="padding: 15px; background: white; border-radius: 5px; text-align: center;">
+                                <div style="font-size: 12px; color: #999; margin-bottom: 8px;">連続記録</div>
+                                <div id="detail-streak" style="font-size: 24px; font-weight: bold; color: #667eea;"></div>
+                            </div>
+                            <div style="padding: 15px; background: white; border-radius: 5px; text-align: center;">
+                                <div style="font-size: 12px; color: #999; margin-bottom: 8px;">最終更新</div>
+                                <div id="detail-last-update" style="font-size: 12px; color: #666;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2059,6 +2141,7 @@
                         <div class="current-value" id="${kpi.id}-display">${kpi.current}</div>
                         <button class="control-btn" onclick="updateKPI('${kpi.id}', 1)">＋</button>
                     </div>
+                    <button class="detail-btn" onclick="openKPIDetailModal('${kpi.id}')" style="margin-top: 10px; padding: 10px; background: #667eea; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%; font-weight: bold;">詳細を見る</button>
                     <button class="delete-kpi-btn" onclick="deleteCustomKPI('${kpi.id}')" style="margin-top: 10px; padding: 8px; background: #ff6b6b; color: white; border: none; border-radius: 5px; cursor: pointer; width: 100%;">削除</button>
                 </div>
             `).join('');
@@ -2124,6 +2207,284 @@
             const modal = document.getElementById('custom-kpi-modal');
             if (event.target === modal) {
                 closeCustomKPIModal();
+            }
+            const detailModal = document.getElementById('kpi-detail-modal');
+            if (event.target === detailModal) {
+                closeKPIDetailModal();
+            }
+        }
+
+        // ===== KPI DETAIL MODAL =====
+
+        let currentDetailKPIId = null;
+
+        function openKPIDetailModal(kpiId) {
+            if (!configManager) return;
+
+            currentDetailKPIId = kpiId;
+            const modal = document.getElementById('kpi-detail-modal');
+
+            // Get KPI data - try new system first, fallback to legacy
+            let kpi = configManager.getKPI(kpiId);
+            if (!kpi) {
+                // For legacy KPIs, create a temporary object
+                const legacyConfig = kpiConfig[kpiId];
+                if (legacyConfig) {
+                    const value = parseInt(localStorage.getItem(legacyConfig.storageKey)) || 0;
+                    const importance = localStorage.getItem(legacyConfig.importanceKey) || 'B';
+                    kpi = {
+                        id: kpiId,
+                        name: kpiId === 'vocab' ? '📚 英単語' : (kpiId === 'grammar' ? '📖 英文法' : '✏️ 過去問'),
+                        emoji: kpiId === 'vocab' ? '📚' : (kpiId === 'grammar' ? '📖' : '✏️'),
+                        target: legacyConfig.target,
+                        current: value,
+                        importance: importance,
+                        unit: kpiId === 'vocab' ? '個' : (kpiId === 'grammar' ? '個' : '回')
+                    };
+                }
+            }
+
+            if (!kpi) {
+                alert('KPIデータが見つかりません');
+                return;
+            }
+
+            // Update modal header
+            const emojiAndName = kpi.name || kpi.emoji + ' ' + kpiId;
+            const parts = emojiAndName.split(' ');
+            const emoji = parts[0];
+            const name = parts.slice(1).join(' ') || kpiId;
+
+            document.getElementById('detail-modal-emoji').textContent = emoji;
+            document.getElementById('detail-modal-name').textContent = name;
+            document.getElementById('detail-modal-importance').textContent = kpi.importance;
+
+            // Update progress section
+            const percentage = Math.round((kpi.current / kpi.target) * 100);
+            document.getElementById('detail-progress').textContent = `${kpi.current} / ${kpi.target}${kpi.unit}`;
+            document.getElementById('detail-progress-bar').style.width = percentage + '%';
+            document.getElementById('detail-progress-percentage').textContent = percentage + '%';
+
+            // Render all subtasks
+            renderDetailSubtasks(kpiId, kpi);
+
+            // Render progress history
+            generateProgressHistory(kpiId);
+
+            // Render task queue
+            renderDetailTaskQueue(kpiId);
+
+            // Render statistics
+            generateKPIStatistics(kpiId, kpi);
+
+            // Show first tab
+            switchDetailTab('subtasks');
+
+            // Show modal
+            modal.classList.add('show');
+        }
+
+        function closeKPIDetailModal() {
+            const modal = document.getElementById('kpi-detail-modal');
+            modal.classList.remove('show');
+            currentDetailKPIId = null;
+        }
+
+        function switchDetailTab(tabName) {
+            // Hide all tabs
+            document.getElementById('detail-subtasks-tab').style.display = 'none';
+            document.getElementById('detail-history-tab').style.display = 'none';
+            document.getElementById('detail-queue-tab').style.display = 'none';
+            document.getElementById('detail-stats-tab').style.display = 'none';
+
+            // Remove active state from all buttons
+            document.querySelectorAll('.detail-tab-btn').forEach(btn => {
+                btn.style.color = '#999';
+                btn.style.borderBottom = 'none';
+                btn.style.fontWeight = 'normal';
+            });
+
+            // Show selected tab
+            document.getElementById('detail-' + tabName + '-tab').style.display = 'block';
+
+            // Highlight selected button
+            const buttons = document.querySelectorAll('.detail-tab-btn');
+            const buttonLabels = ['サブタスク', '進捗履歴', 'タスクキュー', '統計情報'];
+            const tabNames = ['subtasks', 'history', 'queue', 'stats'];
+            const index = tabNames.indexOf(tabName);
+            if (index >= 0) {
+                buttons[index].style.color = '#667eea';
+                buttons[index].style.borderBottom = '3px solid #667eea';
+                buttons[index].style.fontWeight = 'bold';
+            }
+        }
+
+        function renderDetailSubtasks(kpiId, kpi) {
+            const container = document.getElementById('detail-all-subtasks');
+            if (!container) return;
+
+            // Get tasks for this KPI
+            const tasks = configManager.getTasksByKPI(kpiId);
+
+            if (tasks.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">サブタスクがありません</div>';
+                return;
+            }
+
+            // Render all tasks
+            container.innerHTML = tasks.map(task => `
+                <label style="display: flex; align-items: center; padding: 12px; margin-bottom: 8px; background: ${task.completed ? '#d4edda' : '#f0f0f0'}; border-radius: 5px; cursor: pointer;">
+                    <input type="checkbox" ${task.completed ? 'checked' : ''} onchange="toggleDetailSubtask('${kpiId}', '${task.id}')" style="margin-right: 12px; cursor: pointer;">
+                    <span style="flex: 1; color: ${task.completed ? '#999' : '#333'}; text-decoration: ${task.completed ? 'line-through' : 'none'};">${task.name}</span>
+                    ${task.completed ? '<span style="color: #999; font-size: 12px;">✓ 完了</span>' : ''}
+                </label>
+            `).join('');
+        }
+
+        function toggleDetailSubtask(kpiId, taskId) {
+            if (!kgiStore) return;
+
+            try {
+                const task = configManager.getTask(taskId);
+                if (task) {
+                    kgiStore.toggleTaskCompletion(taskId);
+                    updateDisplay(kpiId, configManager.getKPI(kpiId).current);
+                    updateKgiProgress();
+                    // Re-render subtasks
+                    const kpi = configManager.getKPI(kpiId);
+                    renderDetailSubtasks(kpiId, kpi);
+                }
+            } catch (error) {
+                console.error('Error toggling detail subtask:', error);
+            }
+        }
+
+        function generateProgressHistory(kpiId) {
+            const history = getChangeHistory();
+            const kpiHistory = history.filter(entry => entry.kpiId === kpiId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            const container = document.getElementById('detail-history-timeline');
+            if (!container) return;
+
+            if (kpiHistory.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">進捗履歴がありません</div>';
+                return;
+            }
+
+            // Display latest changes (reverse order, newest first)
+            const displayHistory = kpiHistory.slice(-10).reverse();
+
+            container.innerHTML = displayHistory.map(entry => {
+                const date = new Date(entry.timestamp);
+                const dateStr = date.toLocaleDateString('ja-JP', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+                return `
+                    <div style="padding: 10px; margin-bottom: 8px; background: white; border-left: 4px solid #667eea; border-radius: 3px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <span style="font-weight: bold;">${entry.oldValue} → ${entry.newValue}</span>
+                            <span style="color: #999; font-size: 12px;">${dateStr}</span>
+                        </div>
+                        <div style="color: #666; font-size: 12px; margin-top: 4px;">更新理由: ${entry.source || 'unknown'}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderDetailTaskQueue(kpiId) {
+            const container = document.getElementById('detail-queue-list');
+            if (!container) return;
+
+            // Get queue items for this KPI
+            const queueStr = localStorage.getItem('kgi_task_queue') || '[]';
+            const queue = JSON.parse(queueStr);
+            const kpiQueue = queue.filter(item => item.kpiId === kpiId);
+
+            if (kpiQueue.length === 0) {
+                container.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">キューにタスクがありません</div>';
+                return;
+            }
+
+            container.innerHTML = kpiQueue.map((item, index) => {
+                const task = configManager.getTask(item.taskId);
+                return `
+                    <div style="padding: 12px; margin-bottom: 8px; background: white; border: 1px solid #e0e0e0; border-radius: 5px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="flex: 1;">
+                                <div style="font-weight: bold;">${index + 1}. ${task ? task.name : 'Unknown Task'}</div>
+                                <div style="color: #999; font-size: 12px; margin-top: 4px;">キューに追加: ${new Date(item.addedAt).toLocaleDateString('ja-JP')}</div>
+                            </div>
+                            <button onclick="removeFromQueueDetail('${item.taskId}')" style="background: #ff6b6b; color: white; border: none; padding: 6px 12px; border-radius: 3px; cursor: pointer; font-size: 12px;">削除</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function removeFromQueueDetail(taskId) {
+            try {
+                const queueStr = localStorage.getItem('kgi_task_queue') || '[]';
+                const queue = JSON.parse(queueStr);
+                const newQueue = queue.filter(item => item.taskId !== taskId);
+                localStorage.setItem('kgi_task_queue', JSON.stringify(newQueue));
+                renderDetailTaskQueue(currentDetailKPIId);
+                renderTaskQueue();
+            } catch (error) {
+                console.error('Error removing from queue:', error);
+            }
+        }
+
+        function generateKPIStatistics(kpiId, kpi) {
+            const history = getChangeHistory();
+            const kpiHistory = history.filter(entry => entry.kpiId === kpiId).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+
+            // Calculate completion rate
+            const completionRate = Math.round((kpi.current / kpi.target) * 100);
+            document.getElementById('detail-completion-rate').textContent = completionRate + '%';
+
+            // Calculate daily average
+            let dailyAvg = 0;
+            if (kpiHistory.length > 0) {
+                const firstDate = new Date(kpiHistory[0].timestamp);
+                const lastDate = new Date(kpiHistory[kpiHistory.length - 1].timestamp);
+                const daysElapsed = Math.max(1, (lastDate - firstDate) / (1000 * 60 * 60 * 24));
+                dailyAvg = (kpi.current / daysElapsed).toFixed(2);
+            }
+            document.getElementById('detail-daily-avg').textContent = dailyAvg.toString();
+
+            // Calculate streak (consecutive days with progress)
+            let streak = 0;
+            if (kpiHistory.length > 0) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+
+                let currentDate = new Date(today);
+                let found = true;
+
+                while (found) {
+                    const dateStart = new Date(currentDate);
+                    const dateEnd = new Date(currentDate);
+                    dateEnd.setDate(dateEnd.getDate() + 1);
+
+                    const dayChanges = kpiHistory.filter(entry => {
+                        const entryDate = new Date(entry.timestamp);
+                        return entryDate >= dateStart && entryDate < dateEnd;
+                    });
+
+                    if (dayChanges.length > 0) {
+                        streak++;
+                        currentDate.setDate(currentDate.getDate() - 1);
+                    } else {
+                        found = false;
+                    }
+                }
+            }
+            document.getElementById('detail-streak').textContent = streak + '日';
+
+            // Last update
+            if (kpiHistory.length > 0) {
+                const lastUpdate = new Date(kpiHistory[kpiHistory.length - 1].timestamp);
+                document.getElementById('detail-last-update').textContent = lastUpdate.toLocaleDateString('ja-JP') + '\n' + lastUpdate.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+            } else {
+                document.getElementById('detail-last-update').textContent = '更新なし';
             }
         }
 

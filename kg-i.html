@@ -1829,16 +1829,21 @@
         }
 
         function updateDisplay(kpiId, value) {
-            if (!configManager) return;
+            if (!configManager) {
+                console.warn(`⚠️ updateDisplay(${kpiId}, ${value}) - configManager is null`);
+                return;
+            }
 
             const kpi = configManager.getKPI(kpiId);
             if (!kpi) {
+                console.log(`📝 updateDisplay(${kpiId}, ${value}) - KPI not found in config, checking legacy`);
                 // Handle legacy KPI IDs (vocab, grammar, practice)
                 const legacyConfig = kpiConfig[kpiId];
                 if (legacyConfig) {
                     const target = legacyConfig.target;
                     const percentage = Math.round((value / target) * 100);
                     const element = document.getElementById(`${kpiId}-display`);
+                    console.log(`  - Legacy element found: #${kpiId}-display?`, !!element);
                     if (element) {
                         element.textContent = value;
                         document.getElementById(`${kpiId}-progress`).textContent = value;
@@ -1852,14 +1857,17 @@
 
             const target = kpi.target;
             const percentage = Math.round((value / target) * 100);
+            console.log(`📝 updateDisplay(${kpiId}, ${value}) - target: ${target}, percentage: ${percentage}%`);
 
             // Try both new and old ID formats
             const displayElement = document.getElementById(`${kpiId}-display`) || document.getElementById(`${kpi._migratedFrom}-display`);
+            console.log(`  - Display element found: #${kpiId}-display or #${kpi._migratedFrom}-display?`, !!displayElement);
             if (displayElement) {
                 displayElement.textContent = value;
             }
 
             const progressElement = document.getElementById(`${kpiId}-progress`) || document.getElementById(`${kpi._migratedFrom}-progress`);
+            console.log(`  - Progress element found?`, !!progressElement);
             if (progressElement) {
                 progressElement.textContent = value;
             }
@@ -1867,23 +1875,32 @@
             updateButtonStates(kpiId, value, target);
 
             const barElement = document.getElementById(`${kpiId}-bar`) || document.getElementById(`${kpi._migratedFrom}-bar`);
+            console.log(`  - Bar element found?`, !!barElement);
             if (barElement) {
                 barElement.style.width = percentage + '%';
             }
 
             const percentageElement = document.getElementById(`${kpiId}-percentage`) || document.getElementById(`${kpi._migratedFrom}-percentage`);
+            console.log(`  - Percentage element found?`, !!percentageElement);
             if (percentageElement) {
                 percentageElement.textContent = percentage + '%';
             }
         }
 
         function updateAllDisplays() {
-            if (!configManager) return;
+            console.log('📊 updateAllDisplays() called. configManager:', !!configManager);
+            if (!configManager) {
+                console.warn('⚠️ configManager is null, cannot update displays');
+                return;
+            }
             const kpis = configManager.getKPIs();
+            console.log('📋 KPIs to display:', kpis.length, 'KPIs:', kpis.map(k => ({ id: k.id, current: k.current })));
             kpis.forEach(kpi => {
+                console.log(`  - Updating display for KPI: ${kpi.id} (migrated from: ${kpi._migratedFrom}), current value: ${kpi.current}`);
                 updateDisplay(kpi.id, kpi.current);
                 updateDisplay(kpi._migratedFrom, kpi.current);
             });
+            console.log('✅ updateAllDisplays() complete');
         }
 
         function saveImportanceLevel(kpiId, level) {
@@ -1970,7 +1987,9 @@
 
         function resetKPIs() {
             if (confirm('進捗とタスク重要度をリセットしてもよろしいですか？')) {
+                console.log('🔄 Reset started. kgiStore exists?', !!kgiStore, 'configManager exists?', !!configManager);
                 if (!kgiStore) {
+                    console.log('📦 Using fallback (old) system');
                     // Fallback to old system
                     Object.keys(kpiConfig).forEach(kpiId => {
                         const storageKey = kpiConfig[kpiId].storageKey;
@@ -1988,14 +2007,20 @@
                     initializeSubtasks();
                     renderTaskQueue();
                     updateKgiProgress();
+                    console.log('✅ Fallback system reset complete');
                 } else {
                     // New system
+                    console.log('🆕 Using new system');
                     try {
+                        console.log('Before reset - KPI values:', configManager.getKPIs().map(k => ({ id: k.id, current: k.current })));
                         kgiStore.resetAll();
+                        console.log('After resetAll() - KPI values:', configManager.getKPIs().map(k => ({ id: k.id, current: k.current })));
                         updateAllDisplays();
+                        console.log('After updateAllDisplays()');
                         initializeSubtasks();
                         renderTaskQueue();
                         updateKgiProgress();
+                        console.log('✅ New system reset complete');
                     } catch (error) {
                         console.error('Error resetting KPIs:', error);
                     }

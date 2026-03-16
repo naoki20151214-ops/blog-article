@@ -21,34 +21,45 @@ class ConfigManager {
 
     try {
       // Try to load existing config from API
+      console.log('🔄 Attempting to load configuration from Firestore API...');
       const kgis = await this._apiFetch('/api/kgi', 'GET');
 
       if (kgis && kgis.length > 0) {
         await this._buildConfigFromAPI(kgis);
-        console.log('✅ Loaded configuration from API');
+        console.log(`✅ Successfully loaded ${kgis.length} KGI(s) from Firestore API`);
+        console.log('KGI data:', kgis);
         this.isLoading = false;
         return true;
       }
 
       // No data in API - create default
+      console.log('ℹ️ No KGI data found in Firestore API, creating default configuration');
       this.createDefaultConfig();
       this.isLoading = false;
       return true;
     } catch (error) {
-      console.error('Error loading configuration from API:', error);
+      console.error('❌ Firestore API Error:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+      });
+
       // Fallback: try localStorage as backup
+      console.log('🔄 Attempting fallback: Loading from localStorage...');
       const stored = localStorage.getItem('kgi_config');
       if (stored) {
         try {
           this.config = JSON.parse(stored);
           console.log('✅ Loaded configuration from localStorage (API unavailable)');
+          console.log('Loaded from localStorage:', this.config);
           this.isLoading = false;
           return true;
         } catch (e) {
-          console.error('Error loading from localStorage:', e);
+          console.error('Error parsing localStorage JSON:', e);
         }
       }
       // Last resort: create default
+      console.log('⚠️ No localStorage backup found, creating default configuration');
       this.createDefaultConfig();
       this.isLoading = false;
       return true;
@@ -511,21 +522,32 @@ class ConfigManager {
       description: kgiData.description || '',
     };
 
+    console.log('🔄 Attempting to create KGI on Firestore:', newKGI);
+
     try {
+      console.log(`💾 Saving KGI to Firestore API...`);
       const savedKGI = await this._apiFetch('/api/kgi', 'POST', newKGI);
       const config = this.getConfig();
       config.kgis.push(savedKGI);
       config.currentKgiId = savedKGI.id; // Automatically select new KGI
       this.save();
+      console.log(`✅ KGI successfully saved to Firestore:`, savedKGI);
       this.notifyListeners('kgi_added', savedKGI);
       return savedKGI;
     } catch (error) {
-      console.error('Error adding KGI to API, falling back to localStorage:', error);
+      console.error('❌ Firestore API Error when adding KGI:', error);
+      console.error('Error details:', {
+        message: error.message,
+        newKGI: newKGI,
+      });
+
+      console.log('⚠️ Falling back: Saving KGI to localStorage only...');
       // Fallback: save to localStorage
       const config = this.getConfig();
       config.kgis.push(newKGI);
       config.currentKgiId = newKGI.id;
       this.save();
+      console.log('⚠️ KGI saved to localStorage only (not synced to Firestore):', newKGI);
       this.notifyListeners('kgi_added', newKGI);
       return newKGI;
     }
@@ -656,12 +678,14 @@ class ConfigManager {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include credentials for CORS requests (Safari compatibility)
       };
 
       if (body) {
         options.body = JSON.stringify(body);
       }
 
+      console.log(`🔄 API Request: ${method} ${endpoint}`);
       const response = await fetch(this.apiUrl + endpoint, options);
 
       if (!response.ok) {
@@ -669,9 +693,10 @@ class ConfigManager {
       }
 
       const data = await response.json();
+      console.log(`✅ API Success: ${method} ${endpoint}`);
       return data;
     } catch (error) {
-      console.error(`API request failed: ${method} ${endpoint}`, error);
+      console.error(`❌ API request failed: ${method} ${endpoint}`, error);
       throw error;
     }
   }

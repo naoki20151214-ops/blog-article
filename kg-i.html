@@ -1681,22 +1681,35 @@
 
         async function initializeNewSystem() {
             // Initialize ConfigManager with API URL (use relative paths for same-domain deployment)
+            // Default to empty string for relative paths (same-origin requests)
             const apiUrl = window.API_URL || '';
+
+            console.log('🚀 Initializing KGI System...');
+            console.log('Environment Info:', {
+                apiUrl: apiUrl || '(relative paths)',
+                userAgent: navigator.userAgent,
+                currentUrl: window.location.href,
+            });
+
             configManager = new ConfigManager(apiUrl);
 
             try {
+                console.log('🔄 Initializing ConfigManager...');
                 await configManager.initialize();
+                console.log('✅ ConfigManager initialized successfully');
             } catch (error) {
-                console.error('Error initializing ConfigManager:', error);
+                console.error('❌ Error initializing ConfigManager:', error);
             }
 
             // Initialize KGIStore
             kgiStore = new KGIStore(configManager, apiUrl);
 
             try {
+                console.log('🔄 Initializing KGIStore...');
                 await kgiStore.initialize();
+                console.log('✅ KGIStore initialized successfully');
             } catch (error) {
-                console.error('Error initializing KGIStore:', error);
+                console.error('❌ Error initializing KGIStore:', error);
             }
 
             // Handle URL parameter for KGI selection
@@ -1725,7 +1738,13 @@
             updateKGIInfoDisplay();
 
             console.log('✅ New system initialized');
-            console.log('Config:', configManager.getConfig());
+            const config = configManager.getConfig();
+            console.log('Configuration loaded:', {
+                kgiCount: config.kgis ? config.kgis.length : 0,
+                currentKgiId: config.currentKgiId,
+                kpis: config.kpis ? config.kpis.length : 0,
+                tasks: config.tasks ? config.tasks.length : 0,
+            });
         }
 
         /**

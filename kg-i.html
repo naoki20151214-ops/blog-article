@@ -715,6 +715,26 @@
             gap: 10px;
         }
     </style>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js"></script>
+
+    <!-- Firebase Configuration -->
+    <script>
+        // Firebase configuration from Firebase Console
+        const firebaseConfig = {
+            apiKey: "AIzaSyBmMPhaYSr6CPo83uhZ6jTI",
+            authDomain: "kgi-db.firebaseapp.com",
+            projectId: "kgi-db",
+            storageBucket: "kgi-db.firebasestorage.app",
+            messagingSenderId: "689071277026",
+            appId: "1:689071277026:web:0fd1b5b33"
+        };
+
+        // Global Firestore Manager instance
+        let firestoreManager = null;
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -2550,6 +2570,57 @@
         }
 
         document.addEventListener('DOMContentLoaded', loadKPIs);
+    </script>
+
+    <!-- Load Firestore Manager -->
+    <script src="js/utils/FirestoreManager.js"></script>
+
+    <!-- Initialize Firestore and System -->
+    <script>
+        // Initialize Firestore on page load
+        async function initializeFirestoreSystem() {
+            try {
+                console.log('🚀 Initializing KGI System with Firestore...');
+
+                // Initialize Firestore Manager
+                firestoreManager = new FirestoreManager(firebaseConfig);
+                await firestoreManager.initialize();
+
+                console.log('✅ Firestore Manager initialized');
+
+                // Load initial KGI data
+                const kgis = await firestoreManager.getAllKGIs();
+                console.log('📊 Loaded KGIs:', kgis);
+
+                if (kgis.length > 0) {
+                    // Store in config for compatibility with existing code
+                    configManager = configManager || { getConfig: () => ({ kgis: [], kpis: [], tasks: [] }) };
+                    const config = configManager.getConfig();
+                    config.kgis = kgis;
+                    config.currentKgiId = kgis[0].id;
+
+                    console.log('✅ System ready with', kgis.length, 'KGI(s)');
+                } else {
+                    console.log('ℹ️ No KGIs found, create your first KGI');
+                }
+
+                // Subscribe to real-time updates
+                firestoreManager.subscribeToKGIs((kgis) => {
+                    console.log('📡 Real-time KGI update received');
+                    // Update UI if needed
+                    updateAllDisplays();
+                });
+
+            } catch (error) {
+                console.error('❌ Error initializing Firestore system:', error);
+            }
+        }
+
+        // Initialize when DOM is ready
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initializeFirestoreSystem();
+            loadKPIs();
+        });
     </script>
 </body>
 </html>

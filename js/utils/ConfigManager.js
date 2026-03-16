@@ -474,7 +474,7 @@ class ConfigManager {
   }
 
   /**
-   * Update KGI (async - sends to API)
+   * Update KGI (async - sends to Firestore)
    */
   async updateKGI(kgiId, updates) {
     const config = this.getConfig();
@@ -496,11 +496,17 @@ class ConfigManager {
     }
 
     try {
-      const updated = await this._apiFetch(`/api/kgi/${kgiId}`, 'PUT', updates);
-      Object.assign(kgi, updated);
-      this.save();
-      this.notifyListeners('kgi_updated', kgi);
-      return kgi;
+      if (typeof firestoreManager !== 'undefined' && firestoreManager && firestoreManager.initialized) {
+        console.log(`🔄 Updating KGI: ${kgiId}`, updates);
+        await firestoreManager.updateKGI(kgiId, updates);
+        Object.assign(kgi, updates);
+        this.save();
+        console.log(`✅ KGI updated: ${kgiId}`);
+        this.notifyListeners('kgi_updated', kgi);
+        return kgi;
+      } else {
+        throw new Error('Firestore Manager not initialized');
+      }
     } catch (error) {
       console.error('Error updating KGI:', error);
       throw error;
@@ -508,53 +514,40 @@ class ConfigManager {
   }
 
   /**
-   * Add new KGI (async - sends to API)
+   * Add new KGI (async - sends to Firestore)
    */
   async addKGI(kgiData) {
     if (!this.validateKGI(kgiData)) {
       throw new Error('Invalid KGI data');
     }
 
-    const newKGI = {
-      id: 'kgi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      name: kgiData.name,
-      emoji: kgiData.emoji || '🎯',
-      description: kgiData.description || '',
-    };
-
-    console.log('🔄 Attempting to create KGI on Firestore:', newKGI);
+    console.log('🔄 Adding KGI to Firestore:', kgiData);
 
     try {
-      console.log(`💾 Saving KGI to Firestore API...`);
-      const savedKGI = await this._apiFetch('/api/kgi', 'POST', newKGI);
-      const config = this.getConfig();
-      config.kgis.push(savedKGI);
-      config.currentKgiId = savedKGI.id; // Automatically select new KGI
-      this.save();
-      console.log(`✅ KGI successfully saved to Firestore:`, savedKGI);
-      this.notifyListeners('kgi_added', savedKGI);
-      return savedKGI;
-    } catch (error) {
-      console.error('❌ Firestore API Error when adding KGI:', error);
-      console.error('Error details:', {
-        message: error.message,
-        newKGI: newKGI,
-      });
+      // Use Firestore Manager if available
+      if (typeof firestoreManager !== 'undefined' && firestoreManager && firestoreManager.initialized) {
+        console.log('💾 Saving KGI to Firestore...');
+        const savedKGI = await firestoreManager.createKGI(kgiData);
 
-      console.log('⚠️ Falling back: Saving KGI to localStorage only...');
-      // Fallback: save to localStorage
-      const config = this.getConfig();
-      config.kgis.push(newKGI);
-      config.currentKgiId = newKGI.id;
-      this.save();
-      console.log('⚠️ KGI saved to localStorage only (not synced to Firestore):', newKGI);
-      this.notifyListeners('kgi_added', newKGI);
-      return newKGI;
+        const config = this.getConfig();
+        config.kgis.push(savedKGI);
+        config.currentKgiId = savedKGI.id;
+        this.save();
+
+        console.log(`✅ KGI successfully saved to Firestore:`, savedKGI);
+        this.notifyListeners('kgi_added', savedKGI);
+        return savedKGI;
+      } else {
+        throw new Error('Firestore Manager not initialized');
+      }
+    } catch (error) {
+      console.error('❌ Error adding KGI to Firestore:', error);
+      throw error;
     }
   }
 
   /**
-   * Delete KGI and its associated KPIs and tasks (async - sends to API)
+   * Delete KGI and its associated KPIs and tasks (async - sends to Firestore)
    */
   async deleteKGI(kgiId) {
     const config = this.getConfig();
@@ -565,25 +558,31 @@ class ConfigManager {
     }
 
     try {
-      await this._apiFetch(`/api/kgi/${kgiId}`, 'DELETE');
+      if (typeof firestoreManager !== 'undefined' && firestoreManager && firestoreManager.initialized) {
+        console.log(`🔄 Deleting KGI: ${kgiId}`);
+        await firestoreManager.deleteKGI(kgiId);
 
-      // Delete associated KPIs and tasks locally
-      const kpisToDelete = config.kpis.filter(kpi => kpi.kgiId === kgiId);
-      kpisToDelete.forEach(kpi => {
-        config.tasks = config.tasks.filter(task => task.kpiId !== kpi.id);
-      });
-      config.kpis = config.kpis.filter(kpi => kpi.kgiId !== kgiId);
+        // Delete associated KPIs and tasks locally
+        const kpisToDelete = config.kpis.filter(kpi => kpi.kgiId === kgiId);
+        kpisToDelete.forEach(kpi => {
+          config.tasks = config.tasks.filter(task => task.kpiId !== kpi.id);
+        });
+        config.kpis = config.kpis.filter(kpi => kpi.kgiId !== kgiId);
 
-      // Remove KGI
-      config.kgis.splice(index, 1);
+        // Remove KGI
+        config.kgis.splice(index, 1);
 
-      // Update currentKgiId if needed
-      if (config.currentKgiId === kgiId) {
-        config.currentKgiId = config.kgis.length > 0 ? config.kgis[0].id : null;
+        // Update currentKgiId if needed
+        if (config.currentKgiId === kgiId) {
+          config.currentKgiId = config.kgis.length > 0 ? config.kgis[0].id : null;
+        }
+
+        this.save();
+        console.log(`✅ KGI deleted: ${kgiId}`);
+        this.notifyListeners('kgi_deleted', kgiId);
+      } else {
+        throw new Error('Firestore Manager not initialized');
       }
-
-      this.save();
-      this.notifyListeners('kgi_deleted', kgiId);
     } catch (error) {
       console.error('Error deleting KGI:', error);
       throw error;

@@ -704,6 +704,7 @@
          * Submit KGI creation form
          */
         async function submitKGI(event) {
+            console.log('🔵 submitKGI called - button clicked');
             event.preventDefault();
 
             // 1️⃣ フォームから値を取得
@@ -711,17 +712,30 @@
             const emoji = document.getElementById('kgi-emoji-input').value;
             const description = document.getElementById('kgi-description-input').value;
 
+            console.log('📋 Form values retrieved:', { name, emoji, description });
+
             // 入力値の検証
             if (!name || !emoji) {
-                alert('KGI名と絵文字を入力してください');
+                console.warn('❌ Validation failed - missing name or emoji');
+                alert('KGI名と絵文字を両方選択してください。\n名前: ' + (name || '未入力') + '\n絵文字: ' + (emoji || '未選択'));
                 return;
             }
+
+            console.log('✓ Validation passed');
 
             try {
                 console.log('📝 KGI 作成開始:', { name, emoji });
 
+                // Check if dependencies are initialized
+                if (!configManager) {
+                    console.error('❌ configManager is not initialized');
+                    alert('エラー: システムの初期化に失敗しています。ページをリロードしてください。');
+                    return;
+                }
+
                 // 2️⃣ ConfigManager.addKGI() を呼び出し
                 // この関数内で Firestore への保存が行われる
+                console.log('🔄 Calling configManager.addKGI()...');
                 const newKGI = await configManager.addKGI({
                     name,
                     emoji,
@@ -729,28 +743,38 @@
                 });
 
                 console.log('✅ KGI が正常に作成され、Firestore に保存されました:', newKGI.id);
+                alert('✅ KGI「' + name + '」を作成しました！\nKGI管理ページに移動します...');
 
                 // 3️⃣ ローカル状態を更新（KGI を選択状態にする）
-                kgiStore.selectKGI(newKGI.id);
+                if (kgiStore) {
+                    kgiStore.selectKGI(newKGI.id);
+                    console.log('✓ KGI selected in kgiStore');
+                } else {
+                    console.warn('⚠️ kgiStore not available, skipping selectKGI');
+                }
 
                 // 4️⃣ モーダルを閉じてフォームをリセット
                 closeKGIModal();
+                console.log('✓ Modal closed');
 
                 // 5️⃣ KPI 作成ページへリダイレクト
+                console.log('🔗 Redirecting to kg-i.html with kgiId:', newKGI.id);
                 window.location.href = 'kg-i.html?kgiId=' + newKGI.id;
 
             } catch (error) {
                 console.error('❌ KGI 作成エラー:', error);
+                console.error('Error stack:', error.stack);
 
                 // Firestore エラーの詳細を表示
                 if (error.code === 'permission-denied') {
-                    alert('Firestore へのアクセス権限がありません。認証を確認してください。');
+                    alert('❌ Firestore へのアクセス権限がありません。\n\n認証を確認してください。');
                 } else if (error.code === 'unauthenticated') {
-                    alert('認証が必要です。ページをリロードしてください。');
-                } else if (error.message.includes('Invalid')) {
-                    alert('入力データが無効です: ' + error.message);
+                    alert('❌ 認証が必要です。\n\nページをリロードして再度試してください。');
+                } else if (error.message && error.message.includes('Invalid')) {
+                    alert('❌ 入力データが無効です。\n\nエラー詳細: ' + error.message);
                 } else {
-                    alert('KGI 作成に失敗しました: ' + error.message);
+                    const errorMsg = error.message || error.toString();
+                    alert('❌ KGI 作成に失敗しました。\n\nエラー: ' + errorMsg + '\n\nコンソールを確認してください。');
                 }
             }
         }

@@ -5,7 +5,7 @@
  */
 
 class ConfigManager {
-  constructor(apiUrl = 'http://localhost:5000') {
+  constructor(apiUrl = '') {
     this.config = null;
     this.listeners = [];
     this.apiUrl = apiUrl;
@@ -520,8 +520,14 @@ class ConfigManager {
       this.notifyListeners('kgi_added', savedKGI);
       return savedKGI;
     } catch (error) {
-      console.error('Error adding KGI:', error);
-      throw error;
+      console.error('Error adding KGI to API, falling back to localStorage:', error);
+      // Fallback: save to localStorage
+      const config = this.getConfig();
+      config.kgis.push(newKGI);
+      config.currentKgiId = newKGI.id;
+      this.save();
+      this.notifyListeners('kgi_added', newKGI);
+      return newKGI;
     }
   }
 

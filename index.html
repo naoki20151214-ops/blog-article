@@ -667,7 +667,7 @@
         /**
          * Submit KGI creation form
          */
-        function submitKGI(event) {
+        async function submitKGI(event) {
             event.preventDefault();
 
             const name = document.getElementById('kgi-name-input').value;
@@ -680,7 +680,7 @@
             }
 
             try {
-                const newKGI = configManager.addKGI({
+                const newKGI = await configManager.addKGI({
                     name,
                     emoji,
                     description

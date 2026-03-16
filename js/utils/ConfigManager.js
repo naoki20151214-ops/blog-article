@@ -535,13 +535,17 @@ class ConfigManager {
       console.log('🔄 FirebaseManager.ensureInitialized() 呼び出し中...');
       await FirebaseManager.ensureInitialized();
       alert('✅ FirebaseManager.ensureInitialized() completed');
+      alert('🔵 DEBUG: After ensureInitialized alert, about to execute console.log at line 538');
       console.log('✅ FirebaseManager 初期化完了');
+      alert('🔵 DEBUG: After console.log 538, about to execute console.log at line 540');
 
       console.log('📡 Firestore に KGI を保存中...');
+      alert('🔵 DEBUG: After console.log 540, about to call saveKGI at line 545');
       alert('🔄 About to call FirebaseManager.saveKGI()');
 
       // 2️⃣ FirebaseManager.saveKGI() を呼び出して Firestore に保存
       // ⭐ タイムアウト付きで実行
+      alert('🔵 DEBUG: About to invoke FirebaseManager.saveKGI() method');
       const savePromise = FirebaseManager.saveKGI({
         name: kgiData.name,
         emoji: kgiData.emoji || '🎯',

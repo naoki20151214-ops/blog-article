@@ -1680,9 +1680,9 @@
         }
 
         async function initializeNewSystem() {
-            // Initialize ConfigManager with API URL (use relative paths for same-domain deployment)
-            // Default to empty string for relative paths (same-origin requests)
-            const apiUrl = window.API_URL || '';
+            // Initialize ConfigManager with API URL
+            // Use /api base path for Vercel deployment (same-domain requests)
+            const apiUrl = window.API_URL || '/api';
 
             console.log('🚀 Initializing KGI System...');
             console.log('Environment Info:', {

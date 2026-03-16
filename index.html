@@ -750,6 +750,7 @@
             const description = document.getElementById('kgi-description-input').value;
 
             console.log('📋 Form values retrieved:', { name, emoji, description });
+            alert('✓ Form values retrieved: name=' + name + ', emoji=' + emoji);
 
             // 入力値の検証
             if (!name || !emoji) {
@@ -759,6 +760,7 @@
             }
 
             console.log('✓ Validation passed');
+            alert('✓ Validation passed');
 
             try {
                 console.log('📝 KGI 作成開始:', { name, emoji });
@@ -770,9 +772,14 @@
                     return;
                 }
 
+                console.log('✓ configManager exists');
+                alert('✓ configManager exists');
+
                 // 2️⃣ ConfigManager.addKGI() を呼び出し
                 // この関数内で Firestore への保存が行われる
                 console.log('🔄 Calling configManager.addKGI()...');
+                alert('🔄 About to call configManager.addKGI()');
+
                 const newKGI = await configManager.addKGI({
                     name,
                     emoji,
@@ -780,6 +787,7 @@
                 });
 
                 console.log('✅ KGI が正常に作成され、Firestore に保存されました:', newKGI.id);
+                alert('✅ addKGI returned: ' + newKGI.id);
                 alert('✅ KGI「' + name + '」を作成しました！\nKGI管理ページに移動します...');
 
                 // 3️⃣ ローカル状態を更新（KGI を選択状態にする）
@@ -803,6 +811,7 @@
                 console.error('Error code:', error.code);
                 console.error('Error message:', error.message);
                 console.error('Error stack:', error.stack);
+                alert('❌ Exception caught: ' + error.message);
 
                 // エラーメッセージをモーダル内に表示
                 const errorDiv = document.getElementById('kgi-error-message');

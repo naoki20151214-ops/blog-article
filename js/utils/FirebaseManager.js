@@ -71,6 +71,9 @@ class FirebaseManager {
     static async saveKGI(kgiData) {
         const db = this.getFirestore();
 
+        alert('🔵 FirebaseManager.saveKGI() called');
+        console.log('🔵 FirebaseManager.saveKGI():', kgiData);
+
         // 保存するデータを準備
         const newKGI = {
             name: kgiData.name,
@@ -81,17 +84,28 @@ class FirebaseManager {
         };
 
         try {
+            alert('🔄 About to call db.collection("kgis").add()');
+            console.log('🔄 db.collection("kgis").add() 実行直前, newKGI=', newKGI);
+
             // Firestore の 'kgis' コレクションに新規ドキュメント追加
             // add() は自動的に UUID を生成してドキュメント ID として使用
             const docRef = await db.collection('kgis').add(newKGI);
 
+            alert('✅ db.add() returned docRef.id=' + docRef.id);
+            console.log('✅ db.add() 完了:', docRef.id);
+
             // 返却するデータに自動生成された ID を追加
             newKGI.id = docRef.id;
 
+            alert('✓ Added id to newKGI object, id=' + newKGI.id);
             console.log('✅ KGI を Firestore に保存:', newKGI.id);
             return newKGI;
         } catch (error) {
+            alert('❌ saveKGI error: ' + error.message);
             console.error('❌ KGI の Firestore 保存失敗:', error);
+            console.error('📍 エラーコード:', error.code);
+            console.error('📍 エラーメッセージ:', error.message);
+            console.error('📍 スタック:', error.stack);
             throw error;
         }
     }

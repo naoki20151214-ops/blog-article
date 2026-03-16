@@ -531,17 +531,31 @@ class ConfigManager {
 
     try {
       // 1️⃣ FirebaseManager を初期化（既に初期化済みの場合はスキップ）
+      alert('🔄 Calling FirebaseManager.ensureInitialized()');
+      console.log('🔄 FirebaseManager.ensureInitialized() 呼び出し中...');
       await FirebaseManager.ensureInitialized();
+      alert('✅ FirebaseManager.ensureInitialized() completed');
+      console.log('✅ FirebaseManager 初期化完了');
 
       console.log('📡 Firestore に KGI を保存中...');
       alert('🔄 About to call FirebaseManager.saveKGI()');
 
       // 2️⃣ FirebaseManager.saveKGI() を呼び出して Firestore に保存
-      const newKGI = await FirebaseManager.saveKGI({
+      // ⭐ タイムアウト付きで実行
+      const savePromise = FirebaseManager.saveKGI({
         name: kgiData.name,
         emoji: kgiData.emoji || '🎯',
         description: kgiData.description || ''
       });
+
+      // タイムアウト設定（5秒）
+      alert('⏱️ Setting up 5s timeout for Firestore save');
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Firestore saveKGI timed out after 5s')), 5000)
+      );
+
+      alert('⏳ Waiting for saveKGI promise...');
+      const newKGI = await Promise.race([savePromise, timeoutPromise]);
 
       alert('✅ FirebaseManager.saveKGI returned: ' + newKGI.id);
       console.log('✅ Firestore 保存完了, ローカル config を更新中...');
@@ -570,8 +584,20 @@ class ConfigManager {
       console.error('📍 エラー詳細 - Stack:', error.stack);
       console.error('📍 入力データ:', {name: kgiData.name, emoji: kgiData.emoji, description: kgiData.description});
 
+      // エラータイプの詳細判定
+      if (error.message.includes('timed out')) {
+        console.error('⏱️ タイムアウトエラー - Firestore 接続遅延またはセキュリティルール問題');
+        alert('⏱️ Timeout: Firestore が応答しません。セキュリティルールを確認してください。');
+      } else if (error.code === 'permission-denied') {
+        console.error('🔒 セキュリティルールエラー - Firestore 書き込み権限なし');
+        alert('🔒 Permission Denied: Firestore セキュリティルール設定を確認してください。');
+      }
+
       // Firestore へのアクセスに失敗した場合、localStorage のみで処理
-      if (error.message.includes('Network') || error.message.includes('Permission')) {
+      if (error.message.includes('Network') ||
+          error.message.includes('Permission') ||
+          error.message.includes('timed out') ||
+          error.code === 'permission-denied') {
         console.warn('⚠️ Firestore にアクセスできないため、localStorage のみで保存します');
 
         // ローカルのみで作成
@@ -593,6 +619,7 @@ class ConfigManager {
         console.log('📊 作成されたローカルKGI:', localKGI);
         this.notifyListeners('kgi_added', localKGI);
 
+        alert('⚠️ Firestore エラーのため、ローカルのみで KGI を作成しました。（後で同期します）');
         return localKGI;
       }
 

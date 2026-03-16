@@ -3,11 +3,14 @@ const router = express.Router();
 const KPI = require('../models/KPI');
 const Task = require('../models/Task');
 const ChangeHistory = require('../models/ChangeHistory');
+const { getDB } = require('../config/firebase');
 
 // GET KPIs for a specific KGI
 router.get('/kgi/:kgiId', async (req, res) => {
   try {
-    const kpis = await KPI.find({ kgiId: req.params.kgiId }).sort({ order: 1 });
+    const kpis = await KPI.findByKgiId(req.params.kgiId);
+    // Sort by order
+    kpis.sort((a, b) => a.order - b.order);
     res.json(kpis);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -17,7 +20,7 @@ router.get('/kgi/:kgiId', async (req, res) => {
 // GET specific KPI
 router.get('/:id', async (req, res) => {
   try {
-    const kpi = await KPI.findOne({ id: req.params.id });
+    const kpi = await KPI.findById(req.params.id);
     if (!kpi) {
       return res.status(404).json({ error: 'KPI not found' });
     }
@@ -48,7 +51,13 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'id, kgiId, name, and target are required' });
     }
 
-    const newKPI = new KPI({
+    // Check if KPI already exists
+    const existing = await KPI.findById(id);
+    if (existing) {
+      return res.status(400).json({ error: 'KPI with this id already exists' });
+    }
+
+    const newKPI = await KPI.create({
       id,
       kgiId,
       name,
@@ -61,16 +70,10 @@ router.post('/', async (req, res) => {
       order: order || 0,
       subtaskSyncType: subtaskSyncType || 'auto',
       subtaskChunkSize: subtaskChunkSize || 10,
-      createdAt: new Date(),
-      modifiedAt: new Date(),
     });
 
-    await newKPI.save();
     res.status(201).json(newKPI);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ error: 'KPI with this id already exists' });
-    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -90,24 +93,25 @@ router.put('/:id', async (req, res) => {
       subtaskChunkSize,
     } = req.body;
 
-    const kpi = await KPI.findOne({ id: req.params.id });
+    const kpi = await KPI.findById(req.params.id);
     if (!kpi) {
       return res.status(404).json({ error: 'KPI not found' });
     }
 
-    if (name) kpi.name = name;
-    if (emoji) kpi.emoji = emoji;
-    if (type) kpi.type = type;
-    if (target !== undefined) kpi.target = target;
-    if (unit !== undefined) kpi.unit = unit;
-    if (importance) kpi.importance = importance;
-    if (order !== undefined) kpi.order = order;
-    if (subtaskSyncType) kpi.subtaskSyncType = subtaskSyncType;
-    if (subtaskChunkSize) kpi.subtaskChunkSize = subtaskChunkSize;
-    kpi.modifiedAt = new Date();
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (emoji) updateData.emoji = emoji;
+    if (type) updateData.type = type;
+    if (target !== undefined) updateData.target = target;
+    if (unit !== undefined) updateData.unit = unit;
+    if (importance) updateData.importance = importance;
+    if (order !== undefined) updateData.order = order;
+    if (subtaskSyncType) updateData.subtaskSyncType = subtaskSyncType;
+    if (subtaskChunkSize) updateData.subtaskChunkSize = subtaskChunkSize;
 
-    await kpi.save();
-    res.json(kpi);
+    await KPI.updateById(req.params.id, updateData);
+    const result = await KPI.findById(req.params.id);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -122,7 +126,7 @@ router.put('/:id/value', async (req, res) => {
       return res.status(400).json({ error: 'value is required' });
     }
 
-    const kpi = await KPI.findOne({ id: req.params.id });
+    const kpi = await KPI.findById(req.params.id);
     if (!kpi) {
       return res.status(404).json({ error: 'KPI not found' });
     }
@@ -131,13 +135,10 @@ router.put('/:id/value', async (req, res) => {
     const newValue = value;
     const changeAmount = newValue - oldValue;
 
-    kpi.current = newValue;
-    kpi.modifiedAt = new Date();
-    await kpi.save();
+    await KPI.updateById(req.params.id, { current: newValue });
 
     // Record change history
-    const history = new ChangeHistory({
-      timestamp: new Date(),
+    const history = await ChangeHistory.create({
       kpiId: req.params.id,
       oldValue,
       newValue,
@@ -145,9 +146,9 @@ router.put('/:id/value', async (req, res) => {
       source: source || 'manual',
       subtaskId: subtaskId || null,
     });
-    await history.save();
 
-    res.json({ kpi, history });
+    const updatedKpi = await KPI.findById(req.params.id);
+    res.json({ kpi: updatedKpi, history });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -156,19 +157,28 @@ router.put('/:id/value', async (req, res) => {
 // DELETE KPI and related data
 router.delete('/:id', async (req, res) => {
   try {
-    const kpi = await KPI.findOne({ id: req.params.id });
+    const kpi = await KPI.findById(req.params.id);
     if (!kpi) {
       return res.status(404).json({ error: 'KPI not found' });
     }
 
+    const db = getDB();
+
     // Delete all tasks
-    await Task.deleteMany({ kpiId: req.params.id });
+    const tasks = await Task.findByKpiId(req.params.id);
+    for (const task of tasks) {
+      await Task.deleteById(task.id);
+    }
 
     // Delete all history
-    await ChangeHistory.deleteMany({ kpiId: req.params.id });
+    const histories = await ChangeHistory.findByKpiId(req.params.id);
+    const historyCollection = db.collection(ChangeHistory.COLLECTION);
+    for (const history of histories) {
+      await historyCollection.doc(history.id).delete();
+    }
 
     // Delete KPI
-    await KPI.deleteOne({ id: req.params.id });
+    await KPI.deleteById(req.params.id);
 
     res.json({ message: 'KPI deleted successfully' });
   } catch (error) {
@@ -179,7 +189,7 @@ router.delete('/:id', async (req, res) => {
 // GET change history for a KPI
 router.get('/:id/history', async (req, res) => {
   try {
-    const history = await ChangeHistory.find({ kpiId: req.params.id }).sort({ timestamp: -1 });
+    const history = await ChangeHistory.findByKpiId(req.params.id);
     res.json(history);
   } catch (error) {
     res.status(500).json({ error: error.message });

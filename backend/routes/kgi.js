@@ -4,11 +4,14 @@ const KGI = require('../models/KGI');
 const KPI = require('../models/KPI');
 const Task = require('../models/Task');
 const ChangeHistory = require('../models/ChangeHistory');
+const { getDB } = require('../config/firebase');
 
 // GET all KGIs
 router.get('/', async (req, res) => {
   try {
-    const kgis = await KGI.find().sort({ createdAt: -1 });
+    const kgis = await KGI.findAll();
+    // Sort by createdAt descending
+    kgis.sort((a, b) => b.createdAt - a.createdAt);
     res.json(kgis);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -18,7 +21,7 @@ router.get('/', async (req, res) => {
 // GET specific KGI
 router.get('/:id', async (req, res) => {
   try {
-    const kgi = await KGI.findOne({ id: req.params.id });
+    const kgi = await KGI.findById(req.params.id);
     if (!kgi) {
       return res.status(404).json({ error: 'KGI not found' });
     }
@@ -37,21 +40,21 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'id and name are required' });
     }
 
-    const newKGI = new KGI({
+    // Check if KGI already exists
+    const existing = await KGI.findById(id);
+    if (existing) {
+      return res.status(400).json({ error: 'KGI with this id already exists' });
+    }
+
+    const newKGI = await KGI.create({
       id,
       name,
       emoji: emoji || '🎯',
       description: description || '',
-      createdAt: new Date(),
-      modifiedAt: new Date(),
     });
 
-    await newKGI.save();
     res.status(201).json(newKGI);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ error: 'KGI with this id already exists' });
-    }
     res.status(500).json({ error: error.message });
   }
 });
@@ -61,18 +64,19 @@ router.put('/:id', async (req, res) => {
   try {
     const { name, emoji, description } = req.body;
 
-    const kgi = await KGI.findOne({ id: req.params.id });
+    const kgi = await KGI.findById(req.params.id);
     if (!kgi) {
       return res.status(404).json({ error: 'KGI not found' });
     }
 
-    if (name) kgi.name = name;
-    if (emoji) kgi.emoji = emoji;
-    if (description !== undefined) kgi.description = description;
-    kgi.modifiedAt = new Date();
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (emoji) updateData.emoji = emoji;
+    if (description !== undefined) updateData.description = description;
 
-    await kgi.save();
-    res.json(kgi);
+    const updated = await KGI.updateById(req.params.id, updateData);
+    const result = await KGI.findById(req.params.id);
+    res.json(result);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -81,30 +85,45 @@ router.put('/:id', async (req, res) => {
 // DELETE KGI and related data
 router.delete('/:id', async (req, res) => {
   try {
-    const kgi = await KGI.findOne({ id: req.params.id });
+    const kgi = await KGI.findById(req.params.id);
     if (!kgi) {
       return res.status(404).json({ error: 'KGI not found' });
     }
 
     // Delete all KPIs associated with this KGI
-    const kpis = await KPI.find({ kgiId: req.params.id });
+    const kpis = await KPI.findByKgiId(req.params.id);
     const kpiIds = kpis.map(kpi => kpi.id);
+
+    const db = getDB();
 
     // Delete all tasks associated with these KPIs
     if (kpiIds.length > 0) {
-      await Task.deleteMany({ kpiId: { $in: kpiIds } });
+      for (const kpiId of kpiIds) {
+        const tasks = await Task.findByKpiId(kpiId);
+        for (const task of tasks) {
+          await Task.deleteById(task.id);
+        }
+      }
     }
 
     // Delete all history associated with these KPIs
     if (kpiIds.length > 0) {
-      await ChangeHistory.deleteMany({ kpiId: { $in: kpiIds } });
+      for (const kpiId of kpiIds) {
+        const histories = await ChangeHistory.findByKpiId(kpiId);
+        const historyCollection = db.collection(ChangeHistory.COLLECTION);
+        for (const history of histories) {
+          await historyCollection.doc(history.id).delete();
+        }
+      }
     }
 
     // Delete KPIs
-    await KPI.deleteMany({ kgiId: req.params.id });
+    for (const kpiId of kpiIds) {
+      await KPI.deleteById(kpiId);
+    }
 
     // Delete KGI
-    await KGI.deleteOne({ id: req.params.id });
+    await KGI.deleteById(req.params.id);
 
     res.json({ message: 'KGI deleted successfully' });
   } catch (error) {

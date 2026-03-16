@@ -1679,13 +1679,25 @@
             });
         }
 
-        function initializeNewSystem() {
-            // Initialize ConfigManager
-            configManager = new ConfigManager();
-            configManager.initialize();
+        async function initializeNewSystem() {
+            // Initialize ConfigManager with API URL
+            const apiUrl = window.API_URL || 'http://localhost:5000';
+            configManager = new ConfigManager(apiUrl);
+
+            try {
+                await configManager.initialize();
+            } catch (error) {
+                console.error('Error initializing ConfigManager:', error);
+            }
 
             // Initialize KGIStore
-            kgiStore = new KGIStore(configManager);
+            kgiStore = new KGIStore(configManager, apiUrl);
+
+            try {
+                await kgiStore.initialize();
+            } catch (error) {
+                console.error('Error initializing KGIStore:', error);
+            }
 
             // Handle URL parameter for KGI selection
             const params = new URLSearchParams(window.location.search);
@@ -1779,9 +1791,9 @@
             }
         }
 
-        function loadKPIs() {
+        async function loadKPIs() {
             // Initialize new system (includes auto-migration)
-            initializeNewSystem();
+            await initializeNewSystem();
 
             // Update all displays based on current values
             // Get only KPIs for current KGI
@@ -2062,7 +2074,7 @@
             document.getElementById('kpi-emoji-input').value = emoji;
         }
 
-        function submitCustomKPI(event) {
+        async function submitCustomKPI(event) {
             event.preventDefault();
 
             if (!configManager || !kgiStore) {
@@ -2083,7 +2095,7 @@
 
             try {
                 // Create new KPI
-                const newKPI = configManager.addKPI({
+                const newKPI = await configManager.addKPI({
                     name: emoji + ' ' + name,
                     emoji: emoji,
                     target: target,
@@ -2103,7 +2115,7 @@
                     const end = Math.min((i + 1) * chunkSize, target);
                     const taskName = `${name} ${start}-${end}`;
 
-                    configManager.addTask({
+                    await configManager.addTask({
                         kpiId: newKPI.id,
                         name: taskName,
                         autoSyncValue: chunkSize,
@@ -2115,7 +2127,7 @@
 
                 // Close modal and update displays
                 closeCustomKPIModal();
-                loadKPIs();
+                await loadKPIs();
                 alert(`「${emoji} ${name}」を追加しました！`);
             } catch (error) {
                 console.error('Error creating custom KPI:', error);
@@ -2219,11 +2231,11 @@
             }
         }
 
-        function deleteCustomKPI(kpiId) {
+        async function deleteCustomKPI(kpiId) {
             if (confirm('このKPIを削除してもよろしいですか？')) {
                 try {
-                    configManager.deleteKPI(kpiId);
-                    loadKPIs();
+                    await configManager.deleteKPI(kpiId);
+                    await loadKPIs();
                     alert('KPIを削除しました');
                 } catch (error) {
                     console.error('Error deleting custom KPI:', error);

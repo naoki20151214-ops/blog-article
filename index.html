@@ -291,6 +291,31 @@
             color: #999;
         }
     </style>
+
+    <!-- 🔥 Firebase JavaScript SDK (CDN) -->
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+    <!-- 🚀 Firebase 初期化スクリプト -->
+    <script>
+        // 🔐 firebaseConfig: Firebase コンソール → プロジェクト設定 → マイアプリ から取得
+        const firebaseConfig = {
+            apiKey: "AIzaSyB8LBwS1Y8mBkzk5QZjDfKL2m5vO9pQ3rE",
+            authDomain: "kgi-system-dev.firebaseapp.com",
+            projectId: "kgi-system-dev",
+            storageBucket: "kgi-system-dev.appspot.com",
+            messagingSenderId: "123456789012",
+            appId: "1:123456789012:web:abcdef1234567890"
+        };
+
+        // 🚀 Firebase アプリケーション初期化
+        firebase.initializeApp(firebaseConfig);
+
+        // 📦 Firestore インスタンス取得
+        window.db = firebase.firestore();
+
+        console.log('✅ Firebase + Firestore 初期化完了');
+    </script>
 </head>
 <body>
     <nav class="navbar">
@@ -370,6 +395,8 @@
         </div>
     </div>
 
+    <!-- Firebase 初期化後に読み込む（順序重要） -->
+    <script src="js/utils/FirebaseManager.js"></script>
     <script src="js/utils/ConfigManager.js"></script>
     <script src="js/utils/KGIStore.js"></script>
     <script src="js/utils/MigrationHelper.js"></script>
@@ -379,10 +406,19 @@
         let configManager;
         let kgiStore;
 
-        function initializeSystem() {
+        async function initializeSystem() {
+            // 1. FirebaseManager が Firebase Firestore を初期化するまで待機
+            await FirebaseManager.ensureInitialized();
+            console.log('✅ FirebaseManager 準備完了');
+
+            // 2. ConfigManager を初期化（async 処理）
             configManager = new ConfigManager();
-            configManager.initialize();
+            await configManager.initialize();
+            console.log('✅ ConfigManager 準備完了');
+
+            // 3. KGIStore を初期化
             kgiStore = new KGIStore(configManager);
+            console.log('✅ KGIStore 準備完了');
         }
 
         // KPI Configuration
@@ -670,33 +706,51 @@
         async function submitKGI(event) {
             event.preventDefault();
 
+            // 1️⃣ フォームから値を取得
             const name = document.getElementById('kgi-name-input').value;
             const emoji = document.getElementById('kgi-emoji-input').value;
             const description = document.getElementById('kgi-description-input').value;
 
+            // 入力値の検証
             if (!name || !emoji) {
                 alert('KGI名と絵文字を入力してください');
                 return;
             }
 
             try {
+                console.log('📝 KGI 作成開始:', { name, emoji });
+
+                // 2️⃣ ConfigManager.addKGI() を呼び出し
+                // この関数内で Firestore への保存が行われる
                 const newKGI = await configManager.addKGI({
                     name,
                     emoji,
                     description
                 });
 
+                console.log('✅ KGI が正常に作成され、Firestore に保存されました:', newKGI.id);
+
+                // 3️⃣ ローカル状態を更新（KGI を選択状態にする）
                 kgiStore.selectKGI(newKGI.id);
+
+                // 4️⃣ モーダルを閉じてフォームをリセット
                 closeKGIModal();
 
-                // Redirect to KPI creation page with new KGI ID
+                // 5️⃣ KPI 作成ページへリダイレクト
                 window.location.href = 'kg-i.html?kgiId=' + newKGI.id;
+
             } catch (error) {
-                console.error('Error creating KGI:', error);
-                // API failures are handled silently with localStorage fallback
-                // Only validation errors should reach here
-                if (error.message.includes('Invalid')) {
+                console.error('❌ KGI 作成エラー:', error);
+
+                // Firestore エラーの詳細を表示
+                if (error.code === 'permission-denied') {
+                    alert('Firestore へのアクセス権限がありません。認証を確認してください。');
+                } else if (error.code === 'unauthenticated') {
+                    alert('認証が必要です。ページをリロードしてください。');
+                } else if (error.message.includes('Invalid')) {
                     alert('入力データが無効です: ' + error.message);
+                } else {
+                    alert('KGI 作成に失敗しました: ' + error.message);
                 }
             }
         }

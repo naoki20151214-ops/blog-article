@@ -510,46 +510,77 @@ class ConfigManager {
   /**
    * Add new KGI (async - sends to API)
    */
+  /**
+   * KGI を作成・保存する（Firestore 直接接続版）
+   * @param {Object} kgiData - {name, emoji, description}
+   * @returns {Object} 保存後の KGI オブジェクト（Firestore ID を含む）
+   */
   async addKGI(kgiData) {
+    // 入力値の検証
     if (!this.validateKGI(kgiData)) {
       throw new Error('Invalid KGI data');
     }
 
-    const newKGI = {
-      id: 'kgi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-      name: kgiData.name,
-      emoji: kgiData.emoji || '🎯',
-      description: kgiData.description || '',
-    };
-
-    console.log('🔄 Attempting to create KGI on Firestore:', newKGI);
-
     try {
-      console.log(`💾 Saving KGI to Firestore API...`);
-      const savedKGI = await this._apiFetch('/api/kgi', 'POST', newKGI);
-      const config = this.getConfig();
-      config.kgis.push(savedKGI);
-      config.currentKgiId = savedKGI.id; // Automatically select new KGI
-      this.save();
-      console.log(`✅ KGI successfully saved to Firestore:`, savedKGI);
-      this.notifyListeners('kgi_added', savedKGI);
-      return savedKGI;
-    } catch (error) {
-      console.error('❌ Firestore API Error when adding KGI:', error);
-      console.error('Error details:', {
-        message: error.message,
-        newKGI: newKGI,
+      // 1️⃣ FirebaseManager を初期化（既に初期化済みの場合はスキップ）
+      await FirebaseManager.ensureInitialized();
+
+      console.log('📡 Firestore に KGI を保存中...');
+
+      // 2️⃣ FirebaseManager.saveKGI() を呼び出して Firestore に保存
+      const newKGI = await FirebaseManager.saveKGI({
+        name: kgiData.name,
+        emoji: kgiData.emoji || '🎯',
+        description: kgiData.description || ''
       });
 
-      console.log('⚠️ Falling back: Saving KGI to localStorage only...');
-      // Fallback: save to localStorage
+      console.log('✅ Firestore 保存完了, ローカル config を更新中...');
+
+      // 3️⃣ ローカル設定オブジェクトにも追加（フォールバック用）
       const config = this.getConfig();
       config.kgis.push(newKGI);
+
+      // 4️⃣ 新しい KGI を現在の KGI に設定
       config.currentKgiId = newKGI.id;
+
+      // 5️⃣ localStorage にもバックアップ保存
       this.save();
-      console.log('⚠️ KGI saved to localStorage only (not synced to Firestore):', newKGI);
+
+      console.log('✅ KGI 作成完了（ローカルとクラウドの両方に保存）');
       this.notifyListeners('kgi_added', newKGI);
+
       return newKGI;
+
+    } catch (error) {
+      console.error('❌ KGI 作成失敗（Firestore）:', error);
+
+      // Firestore へのアクセスに失敗した場合、localStorage のみで処理
+      if (error.message.includes('Network') || error.message.includes('Permission')) {
+        console.warn('⚠️ Firestore にアクセスできないため、localStorage のみで保存します');
+
+        // ローカルのみで作成
+        const localKGI = {
+          id: 'kgi_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+          name: kgiData.name,
+          emoji: kgiData.emoji || '🎯',
+          description: kgiData.description || '',
+          createdAt: Date.now(),
+          modifiedAt: Date.now()
+        };
+
+        const config = this.getConfig();
+        config.kgis.push(localKGI);
+        config.currentKgiId = localKGI.id;
+        this.save();
+
+        console.warn('⚠️ KGI がローカルのみで作成されています（Firestore 同期待機中）');
+        this.notifyListeners('kgi_added', localKGI);
+
+        return localKGI;
+      }
+
+      // その他のエラーはそのまま上位に処理
+      throw error;
     }
   }
 

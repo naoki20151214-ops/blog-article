@@ -89,10 +89,25 @@ class FirebaseManager {
             alert('🔄 About to call db.collection("kgis").add()');
             console.log('🔄 db.collection("kgis").add() 実行直前, newKGI=', newKGI);
 
+            // db オブジェクトの詳細確認（デバッグ用）
+            alert('🔍 db チェック: ' +
+                  'type=' + typeof db +
+                  ', collection method=' + (typeof db.collection) +
+                  ', add in collection=' + (db.collection && typeof db.collection('kgis').add === 'function' ? 'yes' : 'no'));
+
             // Firestore の 'kgis' コレクションに新規ドキュメント追加
             // add() は自動的に UUID を生成してドキュメント ID として使用
             alert('🔵 DEBUG: About to execute db.collection("kgis").add() now');
-            const docRef = await db.collection('kgis').add(newKGI);
+
+            // Promise.race でタイムアウト機能を追加（10秒で自動的に失敗）
+            const addPromise = db.collection('kgis').add(newKGI);
+            const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => {
+                    reject(new Error('⏱️ TIMEOUT: Firestore add() が10秒以上応答しません。ネットワーク接続またはFirebaseの初期化を確認してください。'));
+                }, 10000)
+            );
+
+            const docRef = await Promise.race([addPromise, timeoutPromise]);
             alert('🔵 DEBUG: db.collection("kgis").add() has returned, docRef=' + (docRef ? 'OK' : 'NULL'));
 
             alert('✅ db.add() returned docRef.id=' + docRef.id);

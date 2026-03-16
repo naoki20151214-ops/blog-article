@@ -41,6 +41,13 @@ class KGIStore {
       const config = this.configManager.getConfig();
       const kpis = config.kpis || [];
 
+      if (kpis.length === 0) {
+        console.log('ℹ️ No KPIs found in config, skipping history load');
+        return;
+      }
+
+      console.log(`🔄 Loading change history for ${kpis.length} KPI(s)...`);
+
       // Fetch history for all KPIs
       for (const kpi of kpis) {
         try {
@@ -50,11 +57,15 @@ class KGIStore {
           console.warn(`Could not load history for KPI ${kpi.id}:`, e);
         }
       }
+      console.log(`✅ Loaded history with ${this.changeHistory.length} entries`);
     } catch (error) {
-      console.warn('Could not load history from API, using localStorage fallback:', error);
+      console.warn('❌ Could not load history from API, attempting localStorage fallback:', error);
       // Fallback to localStorage
       const historyJson = localStorage.getItem('kgi_history');
       this.changeHistory = historyJson ? JSON.parse(historyJson) : [];
+      if (this.changeHistory.length > 0) {
+        console.log(`✅ Loaded history from localStorage (${this.changeHistory.length} entries)`);
+      }
     }
   }
 
@@ -68,12 +79,14 @@ class KGIStore {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include', // Include credentials for CORS requests (Safari compatibility)
       };
 
       if (body) {
         options.body = JSON.stringify(body);
       }
 
+      console.log(`🔄 API Request: ${method} ${endpoint}`);
       const response = await fetch(this.apiUrl + endpoint, options);
 
       if (!response.ok) {
@@ -81,9 +94,10 @@ class KGIStore {
       }
 
       const data = await response.json();
+      console.log(`✅ API Success: ${method} ${endpoint}`);
       return data;
     } catch (error) {
-      console.error(`API request failed: ${method} ${endpoint}`, error);
+      console.error(`❌ API request failed: ${method} ${endpoint}`, error);
       throw error;
     }
   }

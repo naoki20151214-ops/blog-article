@@ -1680,8 +1680,8 @@
         }
 
         async function initializeNewSystem() {
-            // Initialize ConfigManager with API URL
-            const apiUrl = window.API_URL || 'http://localhost:5000';
+            // Initialize ConfigManager with API URL (use relative paths for same-domain deployment)
+            const apiUrl = window.API_URL || '';
             configManager = new ConfigManager(apiUrl);
 
             try {

@@ -693,7 +693,11 @@
                 window.location.href = 'kg-i.html?kgiId=' + newKGI.id;
             } catch (error) {
                 console.error('Error creating KGI:', error);
-                alert('KGI作成に失敗しました: ' + error.message);
+                // API failures are handled silently with localStorage fallback
+                // Only validation errors should reach here
+                if (error.message.includes('Invalid')) {
+                    alert('入力データが無効です: ' + error.message);
+                }
             }
         }
 

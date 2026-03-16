@@ -338,8 +338,12 @@ class ConfigManager {
       this.notifyListeners('kpi_added', savedKPI);
       return savedKPI;
     } catch (error) {
-      console.error('Error adding KPI:', error);
-      throw error;
+      console.warn('API unavailable, saving KPI to localStorage:', error);
+      // Fallback: save to localStorage if API is not available
+      config.kpis.push(newKPI);
+      this.save();
+      this.notifyListeners('kpi_added', newKPI);
+      return newKPI;
     }
   }
 
@@ -359,8 +363,12 @@ class ConfigManager {
       this.notifyListeners('kpi_updated', kpi);
       return kpi;
     } catch (error) {
-      console.error('Error updating KPI:', error);
-      throw error;
+      console.warn('API unavailable, updating KPI in localStorage:', error);
+      // Fallback: update locally if API is not available
+      Object.assign(kpi, updates);
+      this.save();
+      this.notifyListeners('kpi_updated', kpi);
+      return kpi;
     }
   }
 
@@ -377,15 +385,16 @@ class ConfigManager {
 
     try {
       await this._apiFetch(`/api/kpi/${kpiId}`, 'DELETE');
-      // Also delete tasks for this KPI locally
-      config.tasks = config.tasks.filter(task => task.kpiId !== kpiId);
-      config.kpis.splice(index, 1);
-      this.save();
-      this.notifyListeners('kpi_deleted', kpiId);
     } catch (error) {
-      console.error('Error deleting KPI:', error);
-      throw error;
+      console.warn('API unavailable, deleting KPI from localStorage:', error);
+      // Continue with local deletion even if API fails
     }
+
+    // Also delete tasks for this KPI locally
+    config.tasks = config.tasks.filter(task => task.kpiId !== kpiId);
+    config.kpis.splice(index, 1);
+    this.save();
+    this.notifyListeners('kpi_deleted', kpiId);
   }
 
   /**
@@ -414,8 +423,12 @@ class ConfigManager {
       this.notifyListeners('task_added', savedTask);
       return savedTask;
     } catch (error) {
-      console.error('Error adding task:', error);
-      throw error;
+      console.warn('API unavailable, saving task to localStorage:', error);
+      // Fallback: save to localStorage if API is not available
+      this.getConfig().tasks.push(newTask);
+      this.save();
+      this.notifyListeners('task_added', newTask);
+      return newTask;
     }
   }
 
@@ -435,8 +448,12 @@ class ConfigManager {
       this.notifyListeners('task_updated', task);
       return task;
     } catch (error) {
-      console.error('Error updating task:', error);
-      throw error;
+      console.warn('API unavailable, updating task in localStorage:', error);
+      // Fallback: update locally if API is not available
+      Object.assign(task, updates);
+      this.save();
+      this.notifyListeners('task_updated', task);
+      return task;
     }
   }
 
@@ -453,13 +470,14 @@ class ConfigManager {
 
     try {
       await this._apiFetch(`/api/task/${taskId}`, 'DELETE');
-      config.tasks.splice(index, 1);
-      this.save();
-      this.notifyListeners('task_deleted', taskId);
     } catch (error) {
-      console.error('Error deleting task:', error);
-      throw error;
+      console.warn('API unavailable, deleting task from localStorage:', error);
+      // Continue with local deletion even if API fails
     }
+
+    config.tasks.splice(index, 1);
+    this.save();
+    this.notifyListeners('task_deleted', taskId);
   }
 
   /**
@@ -491,8 +509,12 @@ class ConfigManager {
       this.notifyListeners('kgi_updated', kgi);
       return kgi;
     } catch (error) {
-      console.error('Error updating KGI:', error);
-      throw error;
+      console.warn('API unavailable, updating KGI in localStorage:', error);
+      // Fallback: update locally if API is not available
+      Object.assign(kgi, updates);
+      this.save();
+      this.notifyListeners('kgi_updated', kgi);
+      return kgi;
     }
   }
 
@@ -520,8 +542,14 @@ class ConfigManager {
       this.notifyListeners('kgi_added', savedKGI);
       return savedKGI;
     } catch (error) {
-      console.error('Error adding KGI:', error);
-      throw error;
+      console.warn('API unavailable, saving to localStorage:', error);
+      // Fallback: save to localStorage if API is not available
+      const config = this.getConfig();
+      config.kgis.push(newKGI);
+      config.currentKgiId = newKGI.id;
+      this.save();
+      this.notifyListeners('kgi_added', newKGI);
+      return newKGI;
     }
   }
 
@@ -538,28 +566,28 @@ class ConfigManager {
 
     try {
       await this._apiFetch(`/api/kgi/${kgiId}`, 'DELETE');
-
-      // Delete associated KPIs and tasks locally
-      const kpisToDelete = config.kpis.filter(kpi => kpi.kgiId === kgiId);
-      kpisToDelete.forEach(kpi => {
-        config.tasks = config.tasks.filter(task => task.kpiId !== kpi.id);
-      });
-      config.kpis = config.kpis.filter(kpi => kpi.kgiId !== kgiId);
-
-      // Remove KGI
-      config.kgis.splice(index, 1);
-
-      // Update currentKgiId if needed
-      if (config.currentKgiId === kgiId) {
-        config.currentKgiId = config.kgis.length > 0 ? config.kgis[0].id : null;
-      }
-
-      this.save();
-      this.notifyListeners('kgi_deleted', kgiId);
     } catch (error) {
-      console.error('Error deleting KGI:', error);
-      throw error;
+      console.warn('API unavailable, deleting from localStorage:', error);
+      // Continue with local deletion even if API fails
     }
+
+    // Delete associated KPIs and tasks locally
+    const kpisToDelete = config.kpis.filter(kpi => kpi.kgiId === kgiId);
+    kpisToDelete.forEach(kpi => {
+      config.tasks = config.tasks.filter(task => task.kpiId !== kpi.id);
+    });
+    config.kpis = config.kpis.filter(kpi => kpi.kgiId !== kgiId);
+
+    // Remove KGI
+    config.kgis.splice(index, 1);
+
+    // Update currentKgiId if needed
+    if (config.currentKgiId === kgiId) {
+      config.currentKgiId = config.kgis.length > 0 ? config.kgis[0].id : null;
+    }
+
+    this.save();
+    this.notifyListeners('kgi_deleted', kgiId);
   }
 
   /**

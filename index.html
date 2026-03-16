@@ -410,18 +410,45 @@
         let kgiStore;
 
         async function initializeSystem() {
-            // 1. FirebaseManager が Firebase Firestore を初期化するまで待機
-            await FirebaseManager.ensureInitialized();
-            console.log('✅ FirebaseManager 準備完了');
+            try {
+                console.log('🔄 initializeSystem() 開始...');
 
-            // 2. ConfigManager を初期化（async 処理）
-            configManager = new ConfigManager();
-            await configManager.initialize();
-            console.log('✅ ConfigManager 準備完了');
+                // 1. FirebaseManager が Firebase Firestore を初期化するまで待機
+                console.log('🔄 FirebaseManager.ensureInitialized() 待機中...');
+                await FirebaseManager.ensureInitialized();
+                console.log('✅ FirebaseManager 準備完了');
 
-            // 3. KGIStore を初期化
-            kgiStore = new KGIStore(configManager);
-            console.log('✅ KGIStore 準備完了');
+                // 2. ConfigManager を初期化（async 処理）
+                console.log('🔄 ConfigManager インスタンス化中...');
+                configManager = new ConfigManager();
+                console.log('🔄 configManager.initialize() 待機中...');
+                await configManager.initialize();
+                console.log('✅ ConfigManager 準備完了');
+
+                // 3. KGIStore を初期化
+                console.log('🔄 KGIStore インスタンス化中...');
+                kgiStore = new KGIStore(configManager);
+                console.log('✅ KGIStore 準備完了');
+
+                console.log('✅ initializeSystem() 完了');
+
+            } catch (error) {
+                console.error('❌ initializeSystem() でエラー発生:', error);
+                console.error('エラー詳細:', {
+                    message: error.message,
+                    code: error.code,
+                    stack: error.stack
+                });
+                console.error('⚠️ Firebase, ConfigManager, KGIStore の初期化に失敗しました');
+
+                // エラーをユーザーに通知
+                alert('❌ システム初期化エラー\n\n' +
+                      'Firebase または ConfigManager の初期化に失敗しました。\n\n' +
+                      'ページをリロードしてください。\n\n' +
+                      'エラー詳細: ' + error.message);
+
+                throw error;  // 初期化エラーは上位に throw
+            }
         }
 
         // KPI Configuration
@@ -615,10 +642,12 @@
         /**
          * Initialize dashboard
          */
-        function initDashboard() {
+        async function initDashboard() {
             // Initialize system first time
             if (!configManager) {
-                initializeSystem();
+                console.log('🔄 configManager が未初期化。initializeSystem() を呼び出します...');
+                await initializeSystem();
+                console.log('✅ initDashboard: initializeSystem() 完了');
             }
 
             // Render KGI selector
@@ -815,10 +844,18 @@
         });
 
         // Initialize on page load
-        window.addEventListener('load', initDashboard);
+        window.addEventListener('load', async () => {
+            console.log('📍 load イベント発火');
+            await initDashboard();
+            console.log('📍 initDashboard() 完了');
+        });
 
         // Reinitialize when page gains focus (returning from kg-i.html)
-        window.addEventListener('focus', initDashboard);
+        window.addEventListener('focus', async () => {
+            console.log('📍 focus イベント発火');
+            await initDashboard();
+            console.log('📍 initDashboard() 完了');
+        });
     </script>
 </body>
 </html>

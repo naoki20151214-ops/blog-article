@@ -387,6 +387,9 @@
                     <textarea id="kgi-description-input" placeholder="このKGIについての説明" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px; box-sizing: border-box; font-size: 14px; resize: vertical; min-height: 60px;"></textarea>
                 </div>
 
+                <!-- エラーメッセージ表示エリア -->
+                <div id="kgi-error-message" style="display: none; margin-bottom: 15px; padding: 12px; background: #fee; border: 1px solid #fcc; border-radius: 4px; color: #c33; font-size: 13px; word-break: break-word;"></div>
+
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
                     <button type="button" onclick="closeKGIModal()" style="padding: 10px 20px; background: #ddd; color: #333; border: none; border-radius: 4px; cursor: pointer; font-size: 14px;">キャンセル</button>
                     <button type="submit" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 600;">作成</button>
@@ -685,6 +688,10 @@
                 btn.style.borderColor = '#ddd';
                 btn.style.background = 'white';
             });
+            // Reset error message
+            const errorDiv = document.getElementById('kgi-error-message');
+            errorDiv.style.display = 'none';
+            errorDiv.textContent = '';
         }
 
         /**
@@ -763,19 +770,35 @@
 
             } catch (error) {
                 console.error('❌ KGI 作成エラー:', error);
+                console.error('Error code:', error.code);
+                console.error('Error message:', error.message);
                 console.error('Error stack:', error.stack);
+
+                // エラーメッセージをモーダル内に表示
+                const errorDiv = document.getElementById('kgi-error-message');
+                let errorTitle = '❌ エラーが発生しました';
+                let errorMsg = error.message || error.toString();
 
                 // Firestore エラーの詳細を表示
                 if (error.code === 'permission-denied') {
+                    errorTitle = '❌ アクセス権限エラー';
+                    errorMsg = 'Firestore へのアクセス権限がありません。認証を確認してください。';
                     alert('❌ Firestore へのアクセス権限がありません。\n\n認証を確認してください。');
                 } else if (error.code === 'unauthenticated') {
+                    errorTitle = '❌ 認証エラー';
+                    errorMsg = '認証が必要です。ページをリロードして再度試してください。';
                     alert('❌ 認証が必要です。\n\nページをリロードして再度試してください。');
                 } else if (error.message && error.message.includes('Invalid')) {
+                    errorTitle = '❌ 入力データが無効';
+                    errorMsg = error.message;
                     alert('❌ 入力データが無効です。\n\nエラー詳細: ' + error.message);
                 } else {
-                    const errorMsg = error.message || error.toString();
                     alert('❌ KGI 作成に失敗しました。\n\nエラー: ' + errorMsg + '\n\nコンソールを確認してください。');
                 }
+
+                // モーダル内にエラーメッセージを表示
+                errorDiv.style.display = 'block';
+                errorDiv.innerHTML = '<strong>' + errorTitle + '</strong><br>' + errorMsg;
             }
         }
 

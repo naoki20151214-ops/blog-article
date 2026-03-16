@@ -553,6 +553,10 @@ class ConfigManager {
 
     } catch (error) {
       console.error('❌ KGI 作成失敗（Firestore）:', error);
+      console.error('📍 エラー詳細 - Code:', error.code);
+      console.error('📍 エラー詳細 - Message:', error.message);
+      console.error('📍 エラー詳細 - Stack:', error.stack);
+      console.error('📍 入力データ:', {name: kgiData.name, emoji: kgiData.emoji, description: kgiData.description});
 
       // Firestore へのアクセスに失敗した場合、localStorage のみで処理
       if (error.message.includes('Network') || error.message.includes('Permission')) {
@@ -574,12 +578,14 @@ class ConfigManager {
         this.save();
 
         console.warn('⚠️ KGI がローカルのみで作成されています（Firestore 同期待機中）');
+        console.log('📊 作成されたローカルKGI:', localKGI);
         this.notifyListeners('kgi_added', localKGI);
 
         return localKGI;
       }
 
       // その他のエラーはそのまま上位に処理
+      console.error('❌ リカバリー不可のエラー - 上位に throw します');
       throw error;
     }
   }

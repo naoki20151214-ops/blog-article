@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/mongodb');
+const { initializeFirebase } = require('./config/firebase');
 
 const app = express();
 
@@ -12,8 +12,8 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// Connect to MongoDB
-connectDB();
+// Initialize Firebase
+initializeFirebase();
 
 // Routes
 app.use('/api/kgi', require('./routes/kgi'));

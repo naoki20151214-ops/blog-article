@@ -69,7 +69,9 @@ class FirebaseManager {
      * @returns {Object} 保存後の KGI オブジェクト（id を含む）
      */
     static async saveKGI(kgiData) {
+        alert('🔵 DEBUG: saveKGI() method entered, about to call getFirestore()');
         const db = this.getFirestore();
+        alert('🔵 DEBUG: getFirestore() returned, db=' + (db ? 'OK' : 'NULL'));
 
         alert('🔵 FirebaseManager.saveKGI() called');
         console.log('🔵 FirebaseManager.saveKGI():', kgiData);
@@ -89,7 +91,9 @@ class FirebaseManager {
 
             // Firestore の 'kgis' コレクションに新規ドキュメント追加
             // add() は自動的に UUID を生成してドキュメント ID として使用
+            alert('🔵 DEBUG: About to execute db.collection("kgis").add() now');
             const docRef = await db.collection('kgis').add(newKGI);
+            alert('🔵 DEBUG: db.collection("kgis").add() has returned, docRef=' + (docRef ? 'OK' : 'NULL'));
 
             alert('✅ db.add() returned docRef.id=' + docRef.id);
             console.log('✅ db.add() 完了:', docRef.id);

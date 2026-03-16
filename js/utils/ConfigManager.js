@@ -516,16 +516,25 @@ class ConfigManager {
    * @returns {Object} 保存後の KGI オブジェクト（Firestore ID を含む）
    */
   async addKGI(kgiData) {
+    alert('🔵 ConfigManager.addKGI() started');
+    console.log('🔵 ConfigManager.addKGI() started');
+
     // 入力値の検証
     if (!this.validateKGI(kgiData)) {
+      console.error('❌ validateKGI failed:', kgiData);
+      alert('❌ validateKGI failed');
       throw new Error('Invalid KGI data');
     }
+
+    alert('✓ Validation passed in addKGI');
+    console.log('✓ Validation passed in addKGI');
 
     try {
       // 1️⃣ FirebaseManager を初期化（既に初期化済みの場合はスキップ）
       await FirebaseManager.ensureInitialized();
 
       console.log('📡 Firestore に KGI を保存中...');
+      alert('🔄 About to call FirebaseManager.saveKGI()');
 
       // 2️⃣ FirebaseManager.saveKGI() を呼び出して Firestore に保存
       const newKGI = await FirebaseManager.saveKGI({
@@ -534,6 +543,7 @@ class ConfigManager {
         description: kgiData.description || ''
       });
 
+      alert('✅ FirebaseManager.saveKGI returned: ' + newKGI.id);
       console.log('✅ Firestore 保存完了, ローカル config を更新中...');
 
       // 3️⃣ ローカル設定オブジェクトにも追加（フォールバック用）
@@ -546,12 +556,14 @@ class ConfigManager {
       // 5️⃣ localStorage にもバックアップ保存
       this.save();
 
+      alert('✓ Local config updated, config.kgis.length=' + config.kgis.length);
       console.log('✅ KGI 作成完了（ローカルとクラウドの両方に保存）');
       this.notifyListeners('kgi_added', newKGI);
 
       return newKGI;
 
     } catch (error) {
+      alert('❌ Exception in addKGI: ' + error.message);
       console.error('❌ KGI 作成失敗（Firestore）:', error);
       console.error('📍 エラー詳細 - Code:', error.code);
       console.error('📍 エラー詳細 - Message:', error.message);

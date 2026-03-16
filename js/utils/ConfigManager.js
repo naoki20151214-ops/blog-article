@@ -1,74 +1,94 @@
 /**
  * ConfigManager - Manages KGI system configuration
  * Handles loading, saving, and validating configuration
+ * Now integrated with backend API instead of localStorage
  */
 
 class ConfigManager {
-  constructor() {
+  constructor(apiUrl = 'http://localhost:5000') {
     this.config = null;
     this.listeners = [];
+    this.apiUrl = apiUrl;
+    this.isLoading = false;
   }
 
   /**
-   * Initialize configuration from localStorage or use defaults
+   * Initialize configuration from API or use defaults
    */
-  initialize() {
-    // Try to load existing config
-    const stored = localStorage.getItem('kgi_config');
+  async initialize() {
+    if (this.isLoading) return true;
+    this.isLoading = true;
 
-    if (stored) {
+    try {
+      // Try to load existing config from API
+      const kgis = await this._apiFetch('/api/kgi', 'GET');
+
+      if (kgis && kgis.length > 0) {
+        await this._buildConfigFromAPI(kgis);
+        console.log('✅ Loaded configuration from API');
+        this.isLoading = false;
+        return true;
+      }
+
+      // No data in API - create default
+      this.createDefaultConfig();
+      this.isLoading = false;
+      return true;
+    } catch (error) {
+      console.error('Error loading configuration from API:', error);
+      // Fallback: try localStorage as backup
+      const stored = localStorage.getItem('kgi_config');
+      if (stored) {
+        try {
+          this.config = JSON.parse(stored);
+          console.log('✅ Loaded configuration from localStorage (API unavailable)');
+          this.isLoading = false;
+          return true;
+        } catch (e) {
+          console.error('Error loading from localStorage:', e);
+        }
+      }
+      // Last resort: create default
+      this.createDefaultConfig();
+      this.isLoading = false;
+      return true;
+    }
+  }
+
+  /**
+   * Build config object from API data
+   */
+  async _buildConfigFromAPI(kgis) {
+    // Initialize config structure
+    this.config = {
+      version: 2,
+      createdAt: Date.now(),
+      modifiedAt: Date.now(),
+      kgis: kgis,
+      currentKgiId: kgis[0]?.id || null,
+      kpis: [],
+      tasks: []
+    };
+
+    // Fetch KPIs for each KGI
+    for (const kgi of kgis) {
       try {
-        this.config = JSON.parse(stored);
+        const kpis = await this._apiFetch(`/api/kgi/${kgi.id}/kpi`, 'GET');
+        this.config.kpis.push(...kpis);
 
-        // Auto-migrate single KGI format to multiple KGI format
-        if (this.config.kgi && !this.config.kgis) {
-          console.log('🔄 Auto-migrating single KGI to multiple KGI format');
-          const singleKgi = this.config.kgi;
-          this.config.kgis = [singleKgi];
-          this.config.currentKgiId = singleKgi.id;
-          delete this.config.kgi;
-          this.save();
-          console.log('✅ Migration completed');
+        // Fetch tasks for each KPI
+        for (const kpi of kpis) {
+          try {
+            const tasks = await this._apiFetch(`/api/kpi/${kpi.id}/task`, 'GET');
+            this.config.tasks.push(...tasks);
+          } catch (e) {
+            console.error(`Error fetching tasks for KPI ${kpi.id}:`, e);
+          }
         }
-
-        // Ensure currentKgiId is set
-        if (!this.config.currentKgiId && this.config.kgis && this.config.kgis.length > 0) {
-          this.config.currentKgiId = this.config.kgis[0].id;
-          this.save();
-        }
-
-        console.log('✅ Loaded existing configuration');
-        return true;
-      } catch (error) {
-        console.error('Error loading configuration:', error);
-        return false;
+      } catch (e) {
+        console.error(`Error fetching KPIs for KGI ${kgi.id}:`, e);
       }
     }
-
-    // Check if migration is needed
-    if (MigrationHelper.needsMigration()) {
-      console.log('🔄 Migration detected');
-      const migrationSuccess = MigrationHelper.performAutoMigration();
-      if (migrationSuccess) {
-        const stored = localStorage.getItem('kgi_config');
-        this.config = JSON.parse(stored);
-
-        // Auto-migrate single KGI format to multiple KGI format (for v1 data)
-        if (this.config.kgi && !this.config.kgis) {
-          const singleKgi = this.config.kgi;
-          this.config.kgis = [singleKgi];
-          this.config.currentKgiId = singleKgi.id;
-          delete this.config.kgi;
-          this.save();
-        }
-
-        return true;
-      }
-    }
-
-    // No config and no migration needed - create default
-    this.createDefaultConfig();
-    return true;
   }
 
   /**
@@ -286,9 +306,9 @@ class ConfigManager {
   }
 
   /**
-   * Add new KPI
+   * Add new KPI (async - sends to API)
    */
-  addKPI(kpiData) {
+  async addKPI(kpiData) {
     if (!this.validateKPI(kpiData)) {
       throw new Error('Invalid KPI data');
     }
@@ -309,35 +329,45 @@ class ConfigManager {
       order: config.kpis.filter(k => k.kgiId === kgiId).length,
       subtaskSyncType: 'auto',
       subtaskChunkSize: kpiData.subtaskChunkSize || 1,
-      createdAt: Date.now(),
-      modifiedAt: Date.now()
     };
 
-    config.kpis.push(newKPI);
-    this.save();
-    this.notifyListeners('kpi_added', newKPI);
-    return newKPI;
+    try {
+      const savedKPI = await this._apiFetch('/api/kpi', 'POST', newKPI);
+      config.kpis.push(savedKPI);
+      this.save();
+      this.notifyListeners('kpi_added', savedKPI);
+      return savedKPI;
+    } catch (error) {
+      console.error('Error adding KPI:', error);
+      throw error;
+    }
   }
 
   /**
-   * Update KPI
+   * Update KPI (async - sends to API)
    */
-  updateKPI(kpiId, updates) {
+  async updateKPI(kpiId, updates) {
     const kpi = this.getKPI(kpiId);
     if (!kpi) {
       throw new Error('KPI not found: ' + kpiId);
     }
 
-    Object.assign(kpi, updates, { modifiedAt: Date.now() });
-    this.save();
-    this.notifyListeners('kpi_updated', kpi);
-    return kpi;
+    try {
+      const updated = await this._apiFetch(`/api/kpi/${kpiId}`, 'PUT', updates);
+      Object.assign(kpi, updated);
+      this.save();
+      this.notifyListeners('kpi_updated', kpi);
+      return kpi;
+    } catch (error) {
+      console.error('Error updating KPI:', error);
+      throw error;
+    }
   }
 
   /**
-   * Delete KPI
+   * Delete KPI (async - sends to API)
    */
-  deleteKPI(kpiId) {
+  async deleteKPI(kpiId) {
     const config = this.getConfig();
     const index = config.kpis.findIndex(kpi => kpi.id === kpiId);
 
@@ -345,18 +375,23 @@ class ConfigManager {
       throw new Error('KPI not found: ' + kpiId);
     }
 
-    // Also delete tasks for this KPI
-    config.tasks = config.tasks.filter(task => task.kpiId !== kpiId);
-
-    config.kpis.splice(index, 1);
-    this.save();
-    this.notifyListeners('kpi_deleted', kpiId);
+    try {
+      await this._apiFetch(`/api/kpi/${kpiId}`, 'DELETE');
+      // Also delete tasks for this KPI locally
+      config.tasks = config.tasks.filter(task => task.kpiId !== kpiId);
+      config.kpis.splice(index, 1);
+      this.save();
+      this.notifyListeners('kpi_deleted', kpiId);
+    } catch (error) {
+      console.error('Error deleting KPI:', error);
+      throw error;
+    }
   }
 
   /**
-   * Add new task
+   * Add new task (async - sends to API)
    */
-  addTask(taskData) {
+  async addTask(taskData) {
     if (!this.validateTask(taskData)) {
       throw new Error('Invalid task data');
     }
@@ -370,35 +405,45 @@ class ConfigManager {
       order: this.getTasksByKPI(taskData.kpiId).length,
       autoSyncValue: taskData.autoSyncValue || 1,
       tags: taskData.tags || [],
-      createdAt: Date.now(),
-      modifiedAt: Date.now()
     };
 
-    this.getConfig().tasks.push(newTask);
-    this.save();
-    this.notifyListeners('task_added', newTask);
-    return newTask;
+    try {
+      const savedTask = await this._apiFetch('/api/task', 'POST', newTask);
+      this.getConfig().tasks.push(savedTask);
+      this.save();
+      this.notifyListeners('task_added', savedTask);
+      return savedTask;
+    } catch (error) {
+      console.error('Error adding task:', error);
+      throw error;
+    }
   }
 
   /**
-   * Update task
+   * Update task (async - sends to API)
    */
-  updateTask(taskId, updates) {
+  async updateTask(taskId, updates) {
     const task = this.getTask(taskId);
     if (!task) {
       throw new Error('Task not found: ' + taskId);
     }
 
-    Object.assign(task, updates, { modifiedAt: Date.now() });
-    this.save();
-    this.notifyListeners('task_updated', task);
-    return task;
+    try {
+      const updated = await this._apiFetch(`/api/task/${taskId}`, 'PUT', updates);
+      Object.assign(task, updated);
+      this.save();
+      this.notifyListeners('task_updated', task);
+      return task;
+    } catch (error) {
+      console.error('Error updating task:', error);
+      throw error;
+    }
   }
 
   /**
-   * Delete task
+   * Delete task (async - sends to API)
    */
-  deleteTask(taskId) {
+  async deleteTask(taskId) {
     const config = this.getConfig();
     const index = config.tasks.findIndex(task => task.id === taskId);
 
@@ -406,15 +451,21 @@ class ConfigManager {
       throw new Error('Task not found: ' + taskId);
     }
 
-    config.tasks.splice(index, 1);
-    this.save();
-    this.notifyListeners('task_deleted', taskId);
+    try {
+      await this._apiFetch(`/api/task/${taskId}`, 'DELETE');
+      config.tasks.splice(index, 1);
+      this.save();
+      this.notifyListeners('task_deleted', taskId);
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      throw error;
+    }
   }
 
   /**
-   * Update KGI
+   * Update KGI (async - sends to API)
    */
-  updateKGI(kgiId, updates) {
+  async updateKGI(kgiId, updates) {
     const config = this.getConfig();
     let kgi;
 
@@ -423,6 +474,7 @@ class ConfigManager {
       // Old API: updateKGI(updates) - update current KGI
       updates = kgiId;
       kgi = this.getCurrentKGI();
+      kgiId = kgi.id;
     } else {
       // New API: updateKGI(kgiId, updates) - update specific KGI
       kgi = config.kgis.find(k => k.id === kgiId);
@@ -432,16 +484,22 @@ class ConfigManager {
       throw new Error('KGI not found');
     }
 
-    Object.assign(kgi, updates, { modifiedAt: Date.now() });
-    this.save();
-    this.notifyListeners('kgi_updated', kgi);
-    return kgi;
+    try {
+      const updated = await this._apiFetch(`/api/kgi/${kgiId}`, 'PUT', updates);
+      Object.assign(kgi, updated);
+      this.save();
+      this.notifyListeners('kgi_updated', kgi);
+      return kgi;
+    } catch (error) {
+      console.error('Error updating KGI:', error);
+      throw error;
+    }
   }
 
   /**
-   * Add new KGI
+   * Add new KGI (async - sends to API)
    */
-  addKGI(kgiData) {
+  async addKGI(kgiData) {
     if (!this.validateKGI(kgiData)) {
       throw new Error('Invalid KGI data');
     }
@@ -451,22 +509,26 @@ class ConfigManager {
       name: kgiData.name,
       emoji: kgiData.emoji || '🎯',
       description: kgiData.description || '',
-      createdAt: Date.now(),
-      modifiedAt: Date.now()
     };
 
-    const config = this.getConfig();
-    config.kgis.push(newKGI);
-    config.currentKgiId = newKGI.id; // Automatically select new KGI
-    this.save();
-    this.notifyListeners('kgi_added', newKGI);
-    return newKGI;
+    try {
+      const savedKGI = await this._apiFetch('/api/kgi', 'POST', newKGI);
+      const config = this.getConfig();
+      config.kgis.push(savedKGI);
+      config.currentKgiId = savedKGI.id; // Automatically select new KGI
+      this.save();
+      this.notifyListeners('kgi_added', savedKGI);
+      return savedKGI;
+    } catch (error) {
+      console.error('Error adding KGI:', error);
+      throw error;
+    }
   }
 
   /**
-   * Delete KGI and its associated KPIs and tasks
+   * Delete KGI and its associated KPIs and tasks (async - sends to API)
    */
-  deleteKGI(kgiId) {
+  async deleteKGI(kgiId) {
     const config = this.getConfig();
     const index = config.kgis.findIndex(kgi => kgi.id === kgiId);
 
@@ -474,23 +536,30 @@ class ConfigManager {
       throw new Error('KGI not found: ' + kgiId);
     }
 
-    // Delete associated KPIs and tasks
-    const kpisToDelete = config.kpis.filter(kpi => kpi.kgiId === kgiId);
-    kpisToDelete.forEach(kpi => {
-      config.tasks = config.tasks.filter(task => task.kpiId !== kpi.id);
-    });
-    config.kpis = config.kpis.filter(kpi => kpi.kgiId !== kgiId);
+    try {
+      await this._apiFetch(`/api/kgi/${kgiId}`, 'DELETE');
 
-    // Remove KGI
-    config.kgis.splice(index, 1);
+      // Delete associated KPIs and tasks locally
+      const kpisToDelete = config.kpis.filter(kpi => kpi.kgiId === kgiId);
+      kpisToDelete.forEach(kpi => {
+        config.tasks = config.tasks.filter(task => task.kpiId !== kpi.id);
+      });
+      config.kpis = config.kpis.filter(kpi => kpi.kgiId !== kgiId);
 
-    // Update currentKgiId if needed
-    if (config.currentKgiId === kgiId) {
-      config.currentKgiId = config.kgis.length > 0 ? config.kgis[0].id : null;
+      // Remove KGI
+      config.kgis.splice(index, 1);
+
+      // Update currentKgiId if needed
+      if (config.currentKgiId === kgiId) {
+        config.currentKgiId = config.kgis.length > 0 ? config.kgis[0].id : null;
+      }
+
+      this.save();
+      this.notifyListeners('kgi_deleted', kgiId);
+    } catch (error) {
+      console.error('Error deleting KGI:', error);
+      throw error;
     }
-
-    this.save();
-    this.notifyListeners('kgi_deleted', kgiId);
   }
 
   /**
@@ -561,13 +630,44 @@ class ConfigManager {
   }
 
   /**
-   * Save configuration to localStorage
+   * Save configuration to localStorage (fallback)
    */
   save() {
     if (!this.config) return;
 
     this.config.modifiedAt = Date.now();
+    // Keep localStorage as fallback only
     localStorage.setItem('kgi_config', JSON.stringify(this.config));
+  }
+
+  /**
+   * API helper method for fetch requests
+   */
+  async _apiFetch(endpoint, method = 'GET', body = null) {
+    try {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(this.apiUrl + endpoint, options);
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`API request failed: ${method} ${endpoint}`, error);
+      throw error;
+    }
   }
 
   /**

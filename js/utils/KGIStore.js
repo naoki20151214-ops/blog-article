@@ -1,53 +1,91 @@
 /**
  * KGIStore - Centralized state management for KGI system
  * Manages KPI values, task queue, and change history
+ * Now integrated with backend API for KPI values and history
  */
 
 class KGIStore {
-  constructor(configManager) {
+  constructor(configManager, apiUrl = 'http://localhost:5000') {
     this.configManager = configManager;
     this.taskQueue = [];
     this.changeHistory = [];
     this.listeners = [];
     this.currentKgiId = null; // Current selected KGI
+    this.apiUrl = apiUrl;
     this.initialize();
   }
 
   /**
-   * Initialize store from localStorage
+   * Initialize store from API and localStorage
    */
-  initialize() {
-    // Load task queue
+  async initialize() {
+    // Load task queue from localStorage
     const queueJson = localStorage.getItem('kgi_task_queue');
     this.taskQueue = queueJson ? JSON.parse(queueJson) : [];
 
-    // Load change history
-    const historyJson = localStorage.getItem('kgi_history');
-    this.changeHistory = historyJson ? JSON.parse(historyJson) : [];
-
-    // Load KPI current values from localStorage (for backward compatibility)
-    // Only load legacy values if we haven't migrated yet
-    const config = this.configManager.getConfig();
-    const hasNewConfig = localStorage.getItem('kgi_config') !== null;
-
-    if (!hasNewConfig) {
-      // Legacy system - load from old storage keys
-      config.kpis.forEach(kpi => {
-        if (kpi.storageKey) {
-          const storedValue = localStorage.getItem(kpi.storageKey);
-          if (storedValue !== null) {
-            kpi.current = parseInt(storedValue) || 0;
-          }
-        }
-      });
-    }
-    // If using new config (v2), don't override current values from legacy keys
-    // The migration process already set the correct current values
-
     // Initialize currentKgiId from config
+    const config = this.configManager.getConfig();
     this.currentKgiId = config.currentKgiId || (config.kgis && config.kgis.length > 0 ? config.kgis[0].id : null);
 
+    // Load change history from API if available
+    await this._loadHistoryFromAPI();
+
     console.log('✅ KGIStore initialized');
+  }
+
+  /**
+   * Load change history from API
+   */
+  async _loadHistoryFromAPI() {
+    try {
+      const config = this.configManager.getConfig();
+      const kpis = config.kpis || [];
+
+      // Fetch history for all KPIs
+      for (const kpi of kpis) {
+        try {
+          const history = await this._apiFetch(`/api/kpi/${kpi.id}/history`, 'GET');
+          this.changeHistory.push(...history);
+        } catch (e) {
+          console.warn(`Could not load history for KPI ${kpi.id}:`, e);
+        }
+      }
+    } catch (error) {
+      console.warn('Could not load history from API, using localStorage fallback:', error);
+      // Fallback to localStorage
+      const historyJson = localStorage.getItem('kgi_history');
+      this.changeHistory = historyJson ? JSON.parse(historyJson) : [];
+    }
+  }
+
+  /**
+   * API helper method
+   */
+  async _apiFetch(endpoint, method = 'GET', body = null) {
+    try {
+      const options = {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      };
+
+      if (body) {
+        options.body = JSON.stringify(body);
+      }
+
+      const response = await fetch(this.apiUrl + endpoint, options);
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status} ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error(`API request failed: ${method} ${endpoint}`, error);
+      throw error;
+    }
   }
 
   /**
@@ -59,9 +97,9 @@ class KGIStore {
   }
 
   /**
-   * Update KPI value
+   * Update KPI value (async - sends to API)
    */
-  setKPIValue(kpiId, newValue) {
+  async setKPIValue(kpiId, newValue) {
     const kpi = this.configManager.getKPI(kpiId);
     if (!kpi) {
       throw new Error('KPI not found: ' + kpiId);
@@ -71,25 +109,31 @@ class KGIStore {
     newValue = Math.max(0, Math.min(newValue, kpi.target));
 
     const oldValue = kpi.current;
-    if (oldValue === newValue) return; // No change
+    if (oldValue === newValue) return newValue; // No change
 
-    // Update in config
+    // Update locally first
     kpi.current = newValue;
     this.configManager.save();
 
-    // Also update in legacy storage key for compatibility
-    if (kpi.storageKey) {
-      localStorage.setItem(kpi.storageKey, newValue.toString());
+    // Send to API
+    try {
+      const result = await this._apiFetch(`/api/kpi/${kpiId}/value`, 'PUT', {
+        value: newValue,
+        source: 'manual'
+      });
+
+      // Update subtask sync
+      this.syncSubtasksToValue(kpiId, newValue);
+
+      this.notifyListeners('kpi_value_changed', { kpiId, oldValue, newValue });
+      return newValue;
+    } catch (error) {
+      console.error('Error updating KPI value:', error);
+      // Revert local change if API fails
+      kpi.current = oldValue;
+      this.configManager.save();
+      throw error;
     }
-
-    // Record change
-    this.recordChange(kpiId, oldValue, newValue, 'manual');
-
-    // Update subtask sync
-    this.syncSubtasksToValue(kpiId, newValue);
-
-    this.notifyListeners('kpi_value_changed', { kpiId, oldValue, newValue });
-    return newValue;
   }
 
   /**
@@ -161,21 +205,30 @@ class KGIStore {
   }
 
   /**
-   * Record a change in history
+   * Record a change in history (async - sends to API)
    */
-  recordChange(kpiId, oldValue, newValue, source, subtaskId = null) {
+  async recordChange(kpiId, oldValue, newValue, source, subtaskId = null) {
     const change = {
-      timestamp: Date.now(),
+      timestamp: new Date(),
       kpiId: kpiId,
       oldValue: oldValue,
       newValue: newValue,
       changeAmount: newValue - oldValue,
       source: source,
-      subtaskId: subtaskId
+      subtaskId: subtaskId || null
     };
 
+    // Add to local history
     this.changeHistory.push(change);
-    this._saveHistory();
+    this._saveHistory(); // Backup to localStorage
+
+    // Try to save to API
+    try {
+      await this._apiFetch('/api/kpi/' + kpiId + '/history', 'POST', change);
+    } catch (error) {
+      console.warn('Could not save history to API, using localStorage fallback:', error);
+    }
+
     this.notifyListeners('change_recorded', change);
   }
 

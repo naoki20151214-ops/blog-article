@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>在庫管理ツール - ダッシュボード</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <h1>📦 在庫管理ツール</h1>
+      <nav>
+        <a href="index.html">ダッシュボード</a>
+        <a href="products.html">商品管理</a>
+        <a href="inventory.html">在庫管理</a>
+        <a href="suppliers.html">サプライヤー</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <!-- Dashboard Stats -->
+      <section class="stats-grid">
+        <div class="stat-card">
+          <h3>総商品数</h3>
+          <div class="value" id="total-products">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>総在庫数</h3>
+          <div class="value" id="total-inventory">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>総在庫額</h3>
+          <div class="value" id="total-value">-</div>
+        </div>
+        <div class="stat-card">
+          <h3>在庫不足アイテム</h3>
+          <div class="value" id="low-stock-count">-</div>
+        </div>
+      </section>
+
+      <!-- Quick Actions -->
+      <section class="card">
+        <h2>クイックアクション</h2>
+        <div class="flex gap-10" style="flex-wrap: wrap;">
+          <button class="btn btn-primary" onclick="goToPage('products.html')">新規商品追加</button>
+          <button class="btn btn-success" onclick="goToPage('inventory.html')">在庫調整</button>
+          <button class="btn btn-warning" onclick="checkLowStock()">在庫確認</button>
+        </div>
+      </section>
+
+      <!-- Recent Activity -->
+      <section class="card">
+        <h2>在庫不足アイテム</h2>
+        <table id="low-stock-table">
+          <thead>
+            <tr>
+              <th>商品名</th>
+              <th>SKUコード</th>
+              <th>現在庫数</th>
+              <th>再注文レベル</th>
+              <th>ステータス</th>
+            </tr>
+          </thead>
+          <tbody id="low-stock-body">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 20px;">
+                <div class="spinner"></div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <!-- Quick Stats -->
+      <section class="card">
+        <h2>カテゴリ別在庫</h2>
+        <div id="category-stats"></div>
+      </section>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script>
+    // Initialize dashboard
+    async function initializeDashboard() {
+      try {
+        showLoading();
+
+        // Load products
+        const productsRes = await API.products.getAll();
+        const products = productsRes.data || [];
+
+        // Load inventory
+        const inventoryRes = await API.inventory.getAll();
+        const inventories = inventoryRes.data || [];
+
+        // Load low stock items
+        const lowStockRes = await API.inventory.getLowStock(50);
+        const lowStockItems = lowStockRes.data || [];
+
+        hideLoading();
+
+        // Update stats
+        document.getElementById('total-products').textContent = products.length;
+
+        const totalQuantity = inventories.reduce((sum, inv) => sum + inv.quantityAvailable, 0);
+        document.getElementById('total-inventory').textContent = totalQuantity.toLocaleString();
+
+        const totalValue = products.reduce((sum, product) => {
+          const productInventory = inventories.find(inv => inv.productId === product.id);
+          const quantity = productInventory ? productInventory.quantityAvailable : 0;
+          return sum + (product.unitPrice * quantity);
+        }, 0);
+        document.getElementById('total-value').textContent = formatCurrency(totalValue);
+
+        document.getElementById('low-stock-count').textContent = lowStockItems.length;
+
+        // Display low stock items
+        await displayLowStockTable(lowStockItems, products);
+
+        // Display category stats
+        await displayCategoryStats(products, inventories);
+
+        showAlert('ダッシュボードが読み込まれました', 'success');
+      } catch (error) {
+        hideLoading();
+        showAlert('ダッシュボードの読み込みに失敗しました: ' + error.message, 'danger');
+      }
+    }
+
+    async function displayLowStockTable(lowStockItems, products) {
+      const tbody = document.getElementById('low-stock-body');
+      tbody.innerHTML = '';
+
+      if (lowStockItems.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center;">在庫不足アイテムはありません</td></tr>';
+        return;
+      }
+
+      for (const inventory of lowStockItems.slice(0, 10)) {
+        const product = products.find(p => p.id === inventory.productId);
+        if (!product) continue;
+
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${product.name}</td>
+          <td>${product.code}</td>
+          <td>${inventory.quantityAvailable}</td>
+          <td>${product.reorderLevel}</td>
+          <td>
+            <span class="badge badge-critical">要発注</span>
+          </td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    async function displayCategoryStats(products, inventories) {
+      const categoryDiv = document.getElementById('category-stats');
+      const categories = new Map();
+
+      products.forEach(product => {
+        if (!categories.has(product.category)) {
+          categories.set(product.category, { count: 0, value: 0 });
+        }
+        const cat = categories.get(product.category);
+        const productInventory = inventories.find(inv => inv.productId === product.id);
+        const quantity = productInventory ? productInventory.quantityAvailable : 0;
+        cat.count += quantity;
+        cat.value += product.unitPrice * quantity;
+      });
+
+      let html = '<table style="width: 100%;"><thead><tr><th>カテゴリ</th><th>数量</th><th>額</th></tr></thead><tbody>';
+      categories.forEach((data, category) => {
+        html += `
+          <tr>
+            <td>${category}</td>
+            <td>${data.count}</td>
+            <td>${formatCurrency(data.value)}</td>
+          </tr>
+        `;
+      });
+      html += '</tbody></table>';
+      categoryDiv.innerHTML = html;
+    }
+
+    function goToPage(page) {
+      window.location.href = page;
+    }
+
+    async function checkLowStock() {
+      try {
+        showLoading();
+        const response = await API.inventory.getLowStock(50);
+        hideLoading();
+
+        if (response.success && response.data.length > 0) {
+          showAlert(`${response.data.length}件の在庫不足アイテムが見つかりました`, 'warning');
+        } else {
+          showAlert('在庫不足アイテムはありません', 'info');
+        }
+      } catch (error) {
+        hideLoading();
+        showAlert('確認に失敗しました: ' + error.message, 'danger');
+      }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initializeDashboard);
+  </script>
+</body>
+</html>

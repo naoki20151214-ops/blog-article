@@ -1,0 +1,25 @@
+{
+  "buildCommand": "cd frontend && npm install",
+  "outputDirectory": "frontend",
+  "framework": "vanilla",
+  "regions": ["hnd1"],
+  "env": {
+    "FIREBASE_TYPE": "@pdca_tool_firebase_type",
+    "FIREBASE_PROJECT_ID": "@pdca_tool_firebase_project_id",
+    "FIREBASE_PRIVATE_KEY_ID": "@pdca_tool_firebase_private_key_id",
+    "FIREBASE_PRIVATE_KEY": "@pdca_tool_firebase_private_key",
+    "FIREBASE_CLIENT_EMAIL": "@pdca_tool_firebase_client_email",
+    "FIREBASE_CLIENT_ID": "@pdca_tool_firebase_client_id",
+    "FIREBASE_AUTH_URI": "@pdca_tool_firebase_auth_uri",
+    "FIREBASE_TOKEN_URI": "@pdca_tool_firebase_token_uri",
+    "FIREBASE_AUTH_PROVIDER_X509_CERT_URL": "@pdca_tool_firebase_auth_provider_x509_cert_url",
+    "FIREBASE_CLIENT_X509_CERT_URL": "@pdca_tool_firebase_client_x509_cert_url",
+    "MOCK_MODE": "false"
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/api"
+    }
+  ]
+}

@@ -1,9 +1,22 @@
-const admin = require('firebase-admin');
 require('dotenv').config();
 
-// Initialize Firebase Admin SDK
+const MOCK_MODE = process.env.MOCK_MODE === 'true' || process.env.NODE_ENV === 'mock';
+
+// Get appropriate database instance
+let db = null;
+
 const initializeFirebase = () => {
+  if (MOCK_MODE) {
+    // Use Mock Firebase
+    const { initializeMock } = require('./firebase-mock');
+    initializeMock();
+    console.log('✓ Mock Firebase initialized successfully');
+    return;
+  }
+
+  // Use Real Firebase
   try {
+    const admin = require('firebase-admin');
     const serviceAccount = {
       type: process.env.FIREBASE_TYPE,
       project_id: process.env.FIREBASE_PROJECT_ID,
@@ -21,8 +34,7 @@ const initializeFirebase = () => {
       credential: admin.credential.cert(serviceAccount),
     });
 
-    console.log('Firebase initialized successfully');
-    return admin;
+    console.log('✓ Firebase initialized successfully');
   } catch (error) {
     console.error('Firebase initialization error:', error.message);
     process.exit(1);
@@ -31,11 +43,16 @@ const initializeFirebase = () => {
 
 // Get Firestore instance
 const getDB = () => {
+  if (MOCK_MODE) {
+    const { getDB: getMockDB } = require('./firebase-mock');
+    return getMockDB();
+  }
+
+  const admin = require('firebase-admin');
   return admin.firestore();
 };
 
 module.exports = {
   initializeFirebase,
   getDB,
-  admin,
 };

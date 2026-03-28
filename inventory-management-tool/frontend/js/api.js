@@ -1,5 +1,11 @@
-// API Configuration
-const API_BASE_URL = 'http://localhost:5000/api';
+// API Configuration - Dynamically build base URL
+const getAPIBaseURL = () => {
+  const host = window.location.hostname;
+  const port = 5000;
+  return `http://${host}:${port}/api`;
+};
+
+const API_BASE_URL = getAPIBaseURL();
 
 // API Module
 const API = {

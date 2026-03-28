@@ -1,0 +1,13 @@
+{
+  "name": "inventory-management-tool-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for Inventory Management Tool",
+  "main": "server.js",
+  "scripts": {
+    "start": "npx http-server . -p 3000 -c-1 -o false",
+    "dev": "npx http-server . -p 3000 -c-1"
+  },
+  "keywords": ["inventory", "management"],
+  "author": "",
+  "license": "ISC"
+}
